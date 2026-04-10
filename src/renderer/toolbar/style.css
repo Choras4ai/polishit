@@ -1,0 +1,115 @@
+/* ── Toolbar Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --tb-bg: #1a1a1a;
+  --tb-bg-hover: #2a2a2a;
+  --tb-fg: #e8e8e8;
+  --tb-fg-dim: #999;
+  --tb-accent: #4A7C6B;
+  --tb-accent-fg: #fff;
+  --tb-shadow: 0 8px 32px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.18);
+  --tb-radius: 12px;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+}
+
+/* ── Main Toolbar ── */
+.toolbar {
+  display: inline-flex;
+  padding: 3px;
+  animation: toolbarIn 0.18s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.toolbar-inner {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--tb-bg);
+  border-radius: var(--tb-radius);
+  padding: 4px 6px;
+  box-shadow: var(--tb-shadow);
+  border: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* ── Buttons ── */
+.tool-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border: none;
+  background: transparent;
+  color: var(--tb-fg);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+  -webkit-app-region: no-drag;
+}
+
+.tool-btn:hover {
+  background: var(--tb-bg-hover);
+  color: #fff;
+}
+
+.tool-btn:active {
+  transform: scale(0.95);
+  background: var(--tb-accent);
+  color: var(--tb-accent-fg);
+}
+
+.tool-icon {
+  font-size: 12px;
+  line-height: 1;
+  opacity: 0.85;
+}
+
+.tool-label {
+  line-height: 1;
+}
+
+/* ── Divider ── */
+.tool-divider {
+  width: 1px;
+  height: 16px;
+  background: rgba(255,255,255,0.12);
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+
+/* ── Entrance animation ── */
+@keyframes toolbarIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ── Exit animation ── */
+.toolbar.hiding .toolbar-inner {
+  animation: toolbarOut 0.12s ease-in forwards;
+}
+
+@keyframes toolbarOut {
+  to {
+    opacity: 0;
+    transform: translateY(4px) scale(0.95);
+  }
+}

@@ -1,0 +1,118 @@
+'use strict';
+
+/**
+ * Pre-configured AI provider presets.
+ * All presets use OpenAI-compatible chat/completions format unless noted.
+ */
+const PRESETS = {
+  together: {
+    id: 'together',
+    name: 'Together AI（内置免费）',
+    description: '开箱即用，无需配置，使用 Llama 3.3 70B 模型',
+    apiUrl: 'https://api.together.xyz/v1',
+    model: 'meta-llama/Llama-3.3-70B-Instruct-Turbo',
+    needsKey: false,
+    providerType: 'openai',
+    badge: '免费体验',
+  },
+  siliconflow: {
+    id: 'siliconflow',
+    name: '硅基流动（内置免费）',
+    description: '⚠️ 免费模型能力较弱，建议自行选用最新付费模型的 API',
+    apiUrl: 'https://api.siliconflow.cn/v1',
+    model: 'Qwen/Qwen2.5-7B-Instruct',
+    needsKey: false,
+    providerType: 'openai',
+    badge: '免费 · 能力有限',
+    freeModels: [
+      'Qwen/Qwen3.5-4B',
+      'Qwen/Qwen3-8B',
+      'Qwen/Qwen2.5-7B-Instruct',
+      'deepseek-ai/DeepSeek-R1-Distill-Qwen-7B',
+      'deepseek-ai/DeepSeek-R1-0528-Qwen3-8B',
+      'THUDM/GLM-4.1V-9B-Thinking',
+      'THUDM/GLM-Z1-9B-0414',
+      'THUDM/GLM-4-9B-0414',
+      'internlm/internlm2_5-7b-chat',
+      'tencent/Hunyuan-MT-7B',
+    ],
+  },
+  deepseek: {
+    id: 'deepseek',
+    name: 'DeepSeek',
+    description: '国产大模型，性价比极高，中文能力强',
+    apiUrl: 'https://api.deepseek.com',
+    model: 'deepseek-chat',
+    needsKey: true,
+    providerType: 'openai',
+    keyPlaceholder: 'sk-...',
+    keyUrl: 'https://platform.deepseek.com/api_keys',
+  },
+  doubao: {
+    id: 'doubao',
+    name: '豆包（字节跳动）',
+    description: '火山引擎 API，需要使用接入点 ID 作为模型名',
+    apiUrl: 'https://ark.cn-beijing.volces.com/api/v3',
+    model: 'doubao-1.5-pro-32k',
+    needsKey: true,
+    providerType: 'openai',
+    keyPlaceholder: '输入 API Key',
+    keyUrl: 'https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey',
+  },
+  gemini: {
+    id: 'gemini',
+    name: 'Google Gemini',
+    description: '使用 OpenAI 兼容接口，需要 Google AI API Key',
+    apiUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+    model: 'gemini-2.0-flash',
+    needsKey: true,
+    providerType: 'openai',
+    keyPlaceholder: 'AIza...',
+    keyUrl: 'https://aistudio.google.com/apikey',
+  },
+  claude: {
+    id: 'claude',
+    name: 'Claude（Anthropic）',
+    description: '强大的推理与写作能力，使用原生 Anthropic API',
+    apiUrl: 'https://api.anthropic.com',
+    model: 'claude-sonnet-4-20250514',
+    needsKey: true,
+    providerType: 'anthropic',
+    keyPlaceholder: 'sk-ant-...',
+    keyUrl: 'https://console.anthropic.com/settings/keys',
+  },
+  openai: {
+    id: 'openai',
+    name: 'OpenAI',
+    description: 'GPT-4o 等模型，支持所有 OpenAI 兼容接口',
+    apiUrl: 'https://api.openai.com/v1',
+    model: 'gpt-4o',
+    needsKey: true,
+    providerType: 'openai',
+    keyPlaceholder: 'sk-...',
+    keyUrl: 'https://platform.openai.com/api-keys',
+  },
+  ollama: {
+    id: 'ollama',
+    name: 'Ollama 本地模型',
+    description: '完全离线运行，需先安装 Ollama 并下载模型',
+    apiUrl: 'http://localhost:11434',
+    model: 'qwen2.5',
+    needsKey: false,
+    providerType: 'ollama',
+  },
+  custom: {
+    id: 'custom',
+    name: '自定义接口',
+    description: '手动填写 OpenAI 兼容接口地址',
+    apiUrl: '',
+    model: '',
+    needsKey: true,
+    providerType: 'openai',
+    keyPlaceholder: '输入 API Key',
+  },
+};
+
+const PRESET_ORDER = ['together', 'siliconflow', 'deepseek', 'doubao', 'gemini', 'claude', 'openai', 'ollama', 'custom'];
+
+module.exports = { PRESETS, PRESET_ORDER };

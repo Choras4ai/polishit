@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'">
+  <title>润石</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Title bar -->
+  <header class="titlebar" id="titlebar">
+    <div class="titlebar-left">
+      <span class="app-icon">润</span>
+      <span class="titlebar-label">润石</span>
+      <span class="badge" id="changeBadge"></span>
+    </div>
+    <div class="titlebar-right">
+      <!-- Mode toggle -->
+      <div class="mode-toggle" id="modeToggle">
+        <button class="mode-btn active" data-task="polish" title="润色模式">润色</button>
+        <button class="mode-btn" data-task="dedup" title="降重模式">降重</button>
+        <button class="mode-btn" data-task="deai" title="降AI率模式">降AI</button>
+      </div>
+      <button class="icon-btn" id="btnSettings" title="设置">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M8 4.754a3.246 3.246 0 100 6.492 3.246 3.246 0 000-6.492zM5.754 8a2.246 2.246 0 114.492 0 2.246 2.246 0 01-4.492 0z"/>
+          <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 01-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 01-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 01.52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 011.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 011.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 01.52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 01-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 01-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 002.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 001.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 00-1.115 2.693l.16.291c.415.764-.421 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 00-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 00-2.692-1.115l-.292.16c-.764.415-1.6-.421-1.184-1.185l.159-.291A1.873 1.873 0 001.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 003.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 002.692-1.115l.094-.319z"/>
+        </svg>
+      </button>
+      <button class="icon-btn icon-btn-close" id="btnClose" title="关闭 (Esc)">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+          <path d="M2.22 2.22a.75.75 0 011.06 0L6 4.94l2.72-2.72a.75.75 0 111.06 1.06L7.06 6l2.72 2.72a.75.75 0 11-1.06 1.06L6 7.06 3.28 9.78a.75.75 0 01-1.06-1.06L4.94 6 2.22 3.28a.75.75 0 010-1.06z"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Loading -->
+  <section class="state-view" id="loadingView">
+    <div class="spinner"></div>
+    <p class="state-text" id="loadingText">正在分析文本...</p>
+    <div class="progress-track">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+  </section>
+
+  <!-- Error -->
+  <section class="state-view hidden" id="errorView">
+    <div class="state-icon state-icon-error">!</div>
+    <p class="state-text" id="errorText"></p>
+    <button class="btn btn-primary" id="btnErrorSettings" style="display:none">打开设置</button>
+  </section>
+
+  <!-- No changes -->
+  <section class="state-view hidden" id="noChangeView">
+    <div class="state-icon state-icon-ok">✓</div>
+    <p class="state-text">文本无需修改，已经很完美了！</p>
+  </section>
+
+  <!-- Split result view -->
+  <section class="result-view hidden" id="resultView">
+    <!-- Upper pane: original with annotations -->
+    <div class="pane pane-top">
+      <div class="pane-header">
+        <span class="pane-title">修改建议</span>
+        <div class="pane-actions">
+          <button class="btn-sm btn-sm-ghost" id="btnRejectAll">全部忽略</button>
+          <button class="btn-sm btn-sm-accent" id="btnAcceptAll">全部接受</button>
+        </div>
+      </div>
+      <div class="diff-body" id="diffBody"></div>
+    </div>
+
+    <!-- Resizable divider -->
+    <div class="pane-divider" id="paneDivider">
+      <div class="divider-grip"></div>
+    </div>
+
+    <!-- Lower pane: polished full text -->
+    <div class="pane pane-bottom">
+      <div class="pane-header">
+        <span class="pane-title">完整修改稿</span>
+        <div class="pane-actions">
+          <button class="btn-sm btn-sm-ghost" id="btnCopyPolished" title="复制到剪贴板">复制</button>
+          <button class="btn-sm btn-sm-primary" id="btnUsePolished">直接选用</button>
+        </div>
+      </div>
+      <div class="polished-body" id="polishedBody"></div>
+    </div>
+  </section>
+
+  <!-- Middle action bar (for partial accept → replace) -->
+  <footer class="action-bar hidden" id="actionBar">
+    <span class="action-hint" id="actionHint"></span>
+    <div class="action-spacer"></div>
+    <button class="btn btn-primary" id="btnReplace">替换原文（已选修改）</button>
+  </footer>
+
+  <!-- Popup card for hover suggestions -->
+  <div class="popup-card hidden" id="popupCard">
+    <div class="popup-header">
+      <span class="popup-type" id="popupType"></span>
+      <button class="popup-close" id="popupClose">×</button>
+    </div>
+    <div class="popup-suggestion" id="popupSuggestion"></div>
+    <div class="popup-alternatives hidden" id="popupAlternatives">
+      <div class="popup-alt-label">其他建议：</div>
+      <div class="popup-alt-list" id="popupAltList"></div>
+    </div>
+    <div class="popup-reason" id="popupReason"></div>
+    <div class="popup-actions">
+      <button class="popup-btn popup-btn-dismiss" id="popupDismiss">忽略</button>
+      <button class="popup-btn popup-btn-accept" id="popupAccept">接受修改</button>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'">
+  <title>设置 - 润石</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- macOS hidden-inset title bar spacer -->
+  <div class="titlebar-spacer"></div>
+
+  <!-- Tabs -->
+  <nav class="tabs">
+    <button class="tab active" data-tab="api">API 配置</button>
+    <button class="tab" data-tab="shortcut">快捷键</button>
+    <button class="tab" data-tab="advanced">高级</button>
+    <button class="tab" data-tab="about">关于</button>
+  </nav>
+
+  <!-- API Tab -->
+  <section class="tab-panel active" id="panel-api">
+    <div class="form-group">
+      <label class="form-label">AI 服务商</label>
+      <select class="form-select" id="presetSelect">
+        <!-- Populated by JS -->
+      </select>
+      <p class="form-hint preset-desc" id="presetDesc"></p>
+    </div>
+
+    <!-- API Key field (shown when preset.needsKey) -->
+    <div class="form-group hidden" id="apiKeyGroup">
+      <label class="form-label" for="apiKey">API Key
+        <a class="key-link" id="keyLink" href="#" target="_blank">获取 Key →</a>
+      </label>
+      <div class="input-with-action">
+        <input class="form-input" type="password" id="apiKey"
+               placeholder="sk-...">
+        <button class="btn-inline" id="toggleKeyVis" title="显示/隐藏">👁</button>
+      </div>
+    </div>
+
+    <!-- Built-in badge (shown for Together AI) -->
+    <div class="builtin-badge hidden" id="builtinBadge">
+      <span class="badge-icon">✨</span>
+      <span>使用内置免费 API，开箱即用无需配置</span>
+    </div>
+
+    <!-- Advanced fields (collapsible) -->
+    <details class="advanced-fields" id="advancedApiFields">
+      <summary>高级选项</summary>
+      <div class="form-group">
+        <label class="form-label" for="apiUrl">接口地址</label>
+        <input class="form-input" type="url" id="apiUrl"
+               placeholder="https://api.openai.com/v1">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="modelName">模型名称</label>
+        <input class="form-input" type="text" id="modelName"
+               placeholder="gpt-4o">
+      </div>
+    </details>
+
+    <div class="form-actions">
+      <button class="btn btn-secondary" id="btnTest">测试连接</button>
+      <button class="btn btn-primary" id="btnSaveApi">保存</button>
+      <span class="status-text" id="apiStatus"></span>
+    </div>
+  </section>
+
+  <!-- Shortcut Tab -->
+  <section class="tab-panel" id="panel-shortcut">
+    <div class="form-group">
+      <label class="form-label">当前快捷键</label>
+      <div class="shortcut-display">
+        <kbd id="currentShortcut">Ctrl+Shift+A</kbd>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">修改快捷键</label>
+      <p class="form-hint">点击下方输入框，然后按下新的快捷键组合（需包含修饰键）</p>
+      <div class="shortcut-capture" id="shortcutCapture" tabindex="0">
+        点击此处，然后按下快捷键…
+      </div>
+      <button class="btn btn-primary" id="btnSaveShortcut" disabled>保存快捷键</button>
+      <span class="status-text" id="shortcutStatus"></span>
+    </div>
+  </section>
+
+  <!-- Advanced Tab -->
+  <section class="tab-panel" id="panel-advanced">
+    <div class="form-group">
+      <label class="form-label">默认任务模式</label>
+      <div class="radio-group">
+        <label class="radio-item">
+          <input type="radio" name="taskMode" value="polish" checked>
+          <span>润色</span>
+          <span class="radio-desc">修正语法、标点、用词、风格等问题</span>
+        </label>
+        <label class="radio-item">
+          <input type="radio" name="taskMode" value="dedup">
+          <span>降重</span>
+          <span class="radio-desc">同义改写降低文本重复率，针对知网查重算法优化</span>
+        </label>
+        <label class="radio-item">
+          <input type="radio" name="taskMode" value="deai">
+          <span>降AI率</span>
+          <span class="radio-desc">降低AI检测率，针对知网AIGC检测优化</span>
+        </label>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">处理模式</label>
+      <div class="radio-group">
+        <label class="radio-item">
+          <input type="radio" name="pipelineMode" value="single" checked>
+          <span>单次润色</span>
+          <span class="radio-desc">一次 AI 调用完成润色（速度快、成本低）</span>
+        </label>
+        <label class="radio-item">
+          <input type="radio" name="pipelineMode" value="multi">
+          <span>多智能体</span>
+          <span class="radio-desc">语法→风格分步处理（质量更高、耗时更长）</span>
+        </label>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="temperature">创造性 (Temperature)</label>
+      <div class="slider-row">
+        <input type="range" id="temperature" min="0" max="10" value="3" class="form-slider">
+        <span class="slider-value" id="tempValue">0.3</span>
+      </div>
+      <p class="form-hint">值越低越保守，越高越有创造性。推荐 0.2-0.4。</p>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" id="btnSaveAdvanced">保存</button>
+      <span class="status-text" id="advancedStatus"></span>
+    </div>
+  </section>
+
+  <!-- About Tab -->
+  <section class="tab-panel" id="panel-about">
+    <div class="about-content">
+      <div class="about-icon">润</div>
+      <h2 class="about-title">润石</h2>
+      <p class="about-version">Version 1.3.0</p>
+      <p class="about-desc">
+        润色构石，构石虽糙，一润成文。<br>
+        选中文字，一键润色/降重/降AI，修改意见悬浮呈现。
+      </p>
+      <p class="about-desc-sub">
+        通俗来说：选中任何中文文字，按快捷键，AI帮你改得更好。
+      </p>
+      <div class="about-features">
+        <div class="feature-item">🔒 隐私优先：不存储、不上传、不监听</div>
+        <div class="feature-item">⚡ 极速响应：全局快捷键即时触发</div>
+        <div class="feature-item">🤖 多智能体：语法 + 风格分步润色</div>
+        <div class="feature-item">📝 逐条审阅：每处修改可独立接受或拒绝</div>
+      </div>
+    </div>
+  </section>
+
+  <script src="script.js"></script>
+</body>
+</html>

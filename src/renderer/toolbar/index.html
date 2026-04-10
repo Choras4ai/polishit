@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'">
+  <title>润石工具栏</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="toolbar" id="toolbar">
+    <div class="toolbar-inner">
+      <button class="tool-btn" id="btnPolish" data-task="polish">
+        <span class="tool-icon">✦</span>
+        <span class="tool-label">润色</span>
+      </button>
+      <div class="tool-divider"></div>
+      <button class="tool-btn" id="btnDedup" data-task="dedup">
+        <span class="tool-icon">⇅</span>
+        <span class="tool-label">降重</span>
+      </button>
+      <div class="tool-divider"></div>
+      <button class="tool-btn" id="btnDeAI" data-task="deai">
+        <span class="tool-icon">👤</span>
+        <span class="tool-label">降AI</span>
+      </button>
+    </div>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>

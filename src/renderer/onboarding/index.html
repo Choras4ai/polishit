@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'">
+  <title>欢迎 - 润石</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- macOS title bar spacer -->
+  <div class="titlebar-spacer"></div>
+
+  <!-- Step 1: Welcome -->
+  <section class="step active" id="step-welcome">
+    <div class="welcome-header">
+      <div class="app-icon">润</div>
+      <h1 class="app-title">润石</h1>
+      <p class="app-subtitle">AI 驱动的中文学术写作助手</p>
+    </div>
+
+    <div class="feature-list">
+      <div class="feature-row">
+        <span class="feature-icon">⚡</span>
+        <div>
+          <div class="feature-name">选中即改，零切换成本</div>
+          <div class="feature-desc">不用复制粘贴到 AI 对话框，选中文字即可一键处理</div>
+        </div>
+      </div>
+      <div class="feature-row">
+        <span class="feature-icon">🔬</span>
+        <div>
+          <div class="feature-name">原子级修订，每处改动可见</div>
+          <div class="feature-desc">逐词逐句精修，附带理由和替代方案，不会整段重写丢失原意</div>
+        </div>
+      </div>
+      <div class="feature-row">
+        <span class="feature-icon">🎯</span>
+        <div>
+          <div class="feature-name">润色 / 降重 / 降AI率</div>
+          <div class="feature-desc">论文写作全流程覆盖，降重和降AI针对知网算法优化</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="action-area">
+      <button class="btn btn-primary btn-large" id="btnQuickStart">
+        ✨ 立即体验（免费，无需配置）
+      </button>
+      <button class="btn btn-text" id="btnCustomSetup">
+        我有 API Key，自行配置 →
+      </button>
+    </div>
+  </section>
+
+  <!-- Step 2: Choose provider (shown when user clicks "自行配置") -->
+  <section class="step" id="step-provider">
+    <div class="step-header">
+      <button class="btn-back" id="btnBack">← 返回</button>
+      <h2 class="step-title">选择 AI 服务商</h2>
+      <p class="step-subtitle">选择后可在设置中随时更改</p>
+    </div>
+
+    <div class="provider-list" id="providerList">
+      <!-- Populated by JS -->
+    </div>
+
+    <div class="provider-key-area hidden" id="providerKeyArea">
+      <div class="form-group">
+        <label class="form-label" for="onboardApiKey">API Key</label>
+        <input class="form-input" type="password" id="onboardApiKey" placeholder="sk-...">
+      </div>
+      <button class="btn btn-primary btn-large" id="btnStartWithKey">
+        开始使用
+      </button>
+    </div>
+  </section>
+
+  <!-- Step 3: Ready -->
+  <section class="step" id="step-ready">
+    <div class="ready-content">
+      <div class="ready-icon">🎉</div>
+      <h2 class="ready-title">准备就绪！</h2>
+      <p class="ready-desc">
+        在任意应用中选中中文文本，然后按下快捷键：
+      </p>
+      <kbd class="shortcut-badge" id="shortcutBadge">⌘ ⇧ A</kbd>
+      <p class="ready-hint">
+        AI 将自动润色选中内容，你可以逐条审阅并一键替换。
+      </p>
+      <div class="ready-tips">
+        <div class="tip-item">💡 可在菜单栏托盘图标中打开设置</div>
+        <div class="tip-item" id="tipPermission">💡 首次使用需授予「辅助功能」权限</div>
+      </div>
+      <button class="btn btn-primary btn-large" id="btnFinish">开始润色</button>
+    </div>
+  </section>
+
+  <script src="script.js"></script>
+</body>
+</html>
