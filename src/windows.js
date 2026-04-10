@@ -12,7 +12,6 @@ class WindowManager {
     this.settingsWindow = null;
     this.onboardingWindow = null;
     this.toolbarWindow = null;
-    this.homeWindow = null;
     this._toolbarHideTimer = null;
   }
 
@@ -245,51 +244,10 @@ class WindowManager {
     return { x, y, width, height };
   }
 
-  // ── Home Window ──
+  // ── Home Window (opens settings on Home tab) ──
 
   showHome() {
-    if (this.homeWindow && !this.homeWindow.isDestroyed()) {
-      this.homeWindow.show();
-      this.homeWindow.focus();
-      return;
-    }
-
-    if (isMac) app.dock.show();
-
-    this.homeWindow = new BrowserWindow({
-      width: 420,
-      height: 520,
-      resizable: false,
-      minimizable: true,
-      maximizable: false,
-      ...(isMac
-        ? { titleBarStyle: 'hiddenInset', vibrancy: 'under-window', visualEffectState: 'active' }
-        : { titleBarStyle: 'hidden' }),
-      show: false,
-      webPreferences: {
-        preload: path.join(__dirname, '..', 'preload.js'),
-        contextIsolation: true,
-        nodeIntegration: false,
-        sandbox: true,
-      },
-    });
-
-    this.homeWindow.loadFile(
-      path.join(__dirname, 'renderer', 'home', 'index.html'),
-    );
-
-    this.homeWindow.once('ready-to-show', () => this.homeWindow.show());
-    this.homeWindow.on('closed', () => {
-      this.homeWindow = null;
-      this._hideDockIfNoWindows();
-    });
-  }
-
-  hideHome() {
-    if (this.homeWindow && !this.homeWindow.isDestroyed()) {
-      this.homeWindow.close();
-      this.homeWindow = null;
-    }
+    this.showSettings();
   }
 
   showSettings() {
@@ -301,13 +259,15 @@ class WindowManager {
     if (isMac) app.dock.show();
 
     this.settingsWindow = new BrowserWindow({
-      width: 520,
-      height: 700,
-      resizable: false,
-      minimizable: false,
+      width: 600,
+      height: 720,
+      minWidth: 480,
+      minHeight: 500,
+      resizable: true,
+      minimizable: true,
       ...(isMac
         ? { titleBarStyle: 'hiddenInset', vibrancy: 'under-window', visualEffectState: 'active' }
-        : { titleBarStyle: 'hidden' }),
+        : { titleBarStyle: 'hidden', titleBarOverlay: { color: '#f5f5f7', symbolColor: '#1d1d1f', height: 38 } }),
       webPreferences: {
         preload: path.join(__dirname, '..', 'preload.js'),
         contextIsolation: true,
@@ -339,7 +299,7 @@ class WindowManager {
       minimizable: false,
       ...(isMac
         ? { titleBarStyle: 'hiddenInset', vibrancy: 'under-window', visualEffectState: 'active' }
-        : { titleBarStyle: 'hidden' }),
+        : { titleBarStyle: 'hidden', titleBarOverlay: { color: '#f5f5f7', symbolColor: '#1d1d1f', height: 38 } }),
       show: false,
       webPreferences: {
         preload: path.join(__dirname, '..', 'preload.js'),
@@ -363,7 +323,7 @@ class WindowManager {
   /** Hide dock icon when no visible normal windows remain. */
   _hideDockIfNoWindows() {
     if (!isMac) return;
-    const hasVisible = [this.homeWindow, this.settingsWindow, this.onboardingWindow].some(
+    const hasVisible = [this.settingsWindow, this.onboardingWindow].some(
       w => w && !w.isDestroyed(),
     );
     if (!hasVisible) {

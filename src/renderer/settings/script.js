@@ -25,6 +25,15 @@ $$('.tab').forEach(tab => {
   });
 });
 
+// ── "前往" buttons on home tab ──
+$$('[data-go-tab]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tabId = btn.dataset.goTab;
+    const tabBtn = $(`.tab[data-tab="${tabId}"]`);
+    if (tabBtn) tabBtn.click();
+  });
+});
+
 // ── Preset data (loaded from main process) ──
 let presetsData = {};
 let presetOrder = [];
@@ -235,6 +244,21 @@ async function loadConfig() {
   $('#customPromptDeai').value = config.pipeline?.customPrompts?.deai || '';
 
   renderToolbarStatus(toolbarStatus);
+
+  // ── Home tab status ──
+  const shortcutHome = config.shortcut || 'CommandOrControl+Shift+A';
+  $('#homeShortcut').textContent = formatShortcut(shortcutHome);
+
+  const homePresetId = config.provider?.preset || 'together';
+  const homePreset = presets[homePresetId];
+  $('#homePreset').textContent = homePreset?.name || homePresetId;
+
+  const homeToolbar = config.ui?.floatingToolbarEnabled !== false;
+  $('#homeToolbar').textContent = homeToolbar ? '已开启' : '已关闭';
+
+  const taskLabels = { polish: '润色', dedup: '降重', deai: '降AI率（图一乐版）' };
+  const homeTaskId = config.pipeline?.task || 'polish';
+  $('#homeTask').textContent = taskLabels[homeTaskId] || homeTaskId;
 }
 
 // ── Save provider config (shared by Save + Test) ──

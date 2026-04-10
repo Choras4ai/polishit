@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'">
-  <title>设置 - 润石 PoliShit</title>
+  <title>润石 PoliShit</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -14,15 +14,81 @@
 
   <!-- Tabs -->
   <nav class="tabs">
-    <button class="tab active" data-tab="api">API 配置</button>
+    <button class="tab active" data-tab="home">首页</button>
+    <button class="tab" data-tab="api">API 配置</button>
     <button class="tab" data-tab="shortcut">快捷键</button>
     <button class="tab" data-tab="general">通用</button>
     <button class="tab" data-tab="prompts">提示词</button>
     <button class="tab" data-tab="about">关于</button>
   </nav>
 
+  <!-- Home Tab -->
+  <section class="tab-panel active" id="panel-home">
+    <div class="home-hero">
+      <div class="home-icon">润</div>
+      <h1 class="home-title">润石 PoliShit</h1>
+      <p class="home-slogan">润色构石，构石虽糙，一润成文。</p>
+    </div>
+
+    <!-- Status -->
+    <div class="home-status-card">
+      <div class="home-status-row">
+        <span class="home-status-label">快捷键</span>
+        <span class="home-status-value" id="homeShortcut">–</span>
+      </div>
+      <div class="home-status-row">
+        <span class="home-status-label">AI 服务商</span>
+        <span class="home-status-value" id="homePreset">–</span>
+      </div>
+      <div class="home-status-row">
+        <span class="home-status-label">浮窗工具栏</span>
+        <span class="home-status-value" id="homeToolbar">–</span>
+      </div>
+      <div class="home-status-row">
+        <span class="home-status-label">任务模式</span>
+        <span class="home-status-value" id="homeTask">–</span>
+      </div>
+    </div>
+
+    <!-- Quick start guide -->
+    <div class="home-guide">
+      <h3 class="home-section-title">🚀 快速开始</h3>
+      <div class="home-steps">
+        <div class="home-step">
+          <span class="home-step-num">1</span>
+          <div class="home-step-content">
+            <div class="home-step-title">配置 AI 服务</div>
+            <p class="home-step-desc">默认使用内置免费 API，可直接跳过此步。也可在「API 配置」中切换其他服务商。</p>
+          </div>
+          <button class="home-step-btn" data-go-tab="api">前往 →</button>
+        </div>
+        <div class="home-step">
+          <span class="home-step-num">2</span>
+          <div class="home-step-content">
+            <div class="home-step-title">记住快捷键</div>
+            <p class="home-step-desc">选中文字后按下快捷键即可触发润色。也可在「快捷键」中自定义。</p>
+          </div>
+          <button class="home-step-btn" data-go-tab="shortcut">前往 →</button>
+        </div>
+        <div class="home-step">
+          <span class="home-step-num">3</span>
+          <div class="home-step-content">
+            <div class="home-step-title">试一试</div>
+            <p class="home-step-desc">在任意应用中选中一段中文文字，按快捷键，查看 AI 给出的逐条修改建议。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Usage hint -->
+    <div class="home-hint">
+      <span class="home-hint-icon">💡</span>
+      <p>关闭此窗口后，应用将在系统托盘中常驻运行。随时可以通过托盘图标重新打开。</p>
+    </div>
+  </section>
+
   <!-- API Tab -->
-  <section class="tab-panel active" id="panel-api">
+  <section class="tab-panel" id="panel-api">
     <div class="form-group">
       <label class="form-label">AI 服务商</label>
       <select class="form-select" id="presetSelect">

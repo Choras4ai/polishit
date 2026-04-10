@@ -924,3 +924,152 @@ kbd {
 .advanced-fields[open] .form-group:first-of-type {
   margin-top: 12px;
 }
+
+/* ── Home Tab ── */
+.home-hero {
+  text-align: center;
+  padding: 8px 0 18px;
+}
+
+.home-icon {
+  width: 64px; height: 64px;
+  background: #4A7C6B;
+  color: #fff;
+  font-size: 32px; font-weight: 700;
+  border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 10px;
+  box-shadow: 0 4px 14px rgba(74, 124, 107, 0.22);
+}
+
+.home-title {
+  font-size: 20px; font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.home-slogan {
+  font-size: 13px; color: #4A7C6B;
+  font-weight: 500; letter-spacing: 1px;
+}
+
+.home-status-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 2px 0;
+  margin-bottom: 18px;
+}
+
+.home-status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 16px;
+}
+
+.home-status-row + .home-status-row {
+  border-top: 1px solid var(--border);
+}
+
+.home-status-label {
+  color: var(--text-secondary);
+  font-size: 12.5px;
+}
+
+.home-status-value {
+  font-size: 12.5px; font-weight: 600;
+  color: var(--text);
+}
+
+.home-section-title {
+  font-size: 14px; font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.home-guide {
+  margin-bottom: 18px;
+}
+
+.home-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.home-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+}
+
+.home-step-num {
+  flex-shrink: 0;
+  width: 24px; height: 24px;
+  background: #4A7C6B;
+  color: #fff;
+  font-size: 12px; font-weight: 700;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  margin-top: 1px;
+}
+
+.home-step-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.home-step-title {
+  font-size: 13px; font-weight: 600;
+  margin-bottom: 3px;
+}
+
+.home-step-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.home-step-btn {
+  flex-shrink: 0;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 12px; font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-secondary);
+  font-family: var(--font);
+  transition: all 0.15s;
+  align-self: center;
+}
+
+.home-step-btn:hover {
+  color: #4A7C6B;
+  border-color: #4A7C6B;
+}
+
+.home-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 11px 14px;
+}
+
+.home-hint-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+  line-height: 1.5;
+}
+
+.home-hint p {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
