@@ -5,8 +5,6 @@ const path = require('path');
 
 const isMac = process.platform === 'darwin';
 
-const isMac = process.platform === 'darwin';
-
 class WindowManager {
   constructor() {
     this.resultWindow = null;
@@ -62,7 +60,7 @@ class WindowManager {
       skipTaskbar: true,
       show: false,
       hasShadow: false,
-      ...(isMac ? { type: 'panel' } : {})true,
+      transparent: true,
       focusable: false,
       ...(isMac ? { type: 'panel' } : {}),
       webPreferences: {
@@ -158,8 +156,7 @@ class WindowManager {
       skipTaskbar: true,
       ...(isMac
         ? { vibrancy: 'under-window', visualEffectState: 'active', backgroundColor: '#00000000' }
-        : { backgroundColor: '#ffffff' })
-        ? { vibrancy: 'under-window', visualEffectState: 'active', backgroundColor: '#00000000' }
+
         : { backgroundColor: '#ffffff' }),
       webPreferences: {
         preload: path.join(__dirname, '..', 'preload.js'),
@@ -214,8 +211,6 @@ class WindowManager {
       minimizable: false,
       ...(isMac
         ? { titleBarStyle: 'hiddenInset', vibrancy: 'under-window', visualEffectState: 'active' }
-        : { titleBarStyle: 'hidden' })
-        ? { titleBarStyle: 'hiddenInset', vibrancy: 'under-window', visualEffectState: 'active' }
         : { titleBarStyle: 'hidden' }),
       webPreferences: {
         preload: path.join(__dirname, '..', 'preload.js'),
@@ -244,8 +239,6 @@ class WindowManager {
       resizable: false,
       minimizable: false,
       ...(isMac
-        ? { titleBarStyle: 'hiddenInset', vibrancy: 'under-window', visualEffectState: 'active' }
-        : { titleBarStyle: 'hidden' })
         ? { titleBarStyle: 'hiddenInset', vibrancy: 'under-window', visualEffectState: 'active' }
         : { titleBarStyle: 'hidden' }),
       show: false,
