@@ -92,7 +92,13 @@ app.on('will-quit', () => {
 });
 
 app.on('second-instance', () => {
-  windowManager?.showSettings();
+  // Only bring an existing visible window to front; don't auto-open settings
+  if (windowManager?.settingsWindow && !windowManager.settingsWindow.isDestroyed()) {
+    windowManager.settingsWindow.focus();
+  } else if (windowManager?.resultWindow && !windowManager.resultWindow.isDestroyed()) {
+    windowManager.resultWindow.focus();
+  }
+  // else: app is running silently in tray – do nothing
 });
 
 // ── Trigger handler ──
