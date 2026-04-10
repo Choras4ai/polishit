@@ -184,8 +184,7 @@ function createMarker(change) {
     textSpan.textContent = change.oldText;
   } else if (change.type === 'insert') {
     textSpan.textContent = '⊕';
-    textSpan.style.fontSize = '10px';
-    textSpan.style.opacity = '0.6';
+    textSpan.classList.add('insert-icon');
   }
   marker.appendChild(textSpan);
 

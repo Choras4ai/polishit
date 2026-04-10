@@ -104,14 +104,19 @@ body{animation:resultIn .3s cubic-bezier(.22,1,.36,1) both;transform-origin:top 
 .change-marker.accepted{opacity:.5;pointer-events:none}
 .change-marker.dismissed .change-text{text-decoration:none;border-bottom:none}
 
+/* Insert marker icon (⊕) */
+.insert-icon{display:inline-block;font-size:16px;font-weight:700;color:var(--accent);opacity:1;vertical-align:middle;line-height:1;padding:0 2px;animation:insertPulse 2s ease-in-out infinite}
+.change-marker:hover .insert-icon{color:#fff;background:var(--accent);border-radius:50%;animation:none}
+@keyframes insertPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(1.15)}}
+
 /* Error type underlines */
-.change-marker[data-type="grammar"]   .change-text{border-bottom:2px solid var(--red);text-decoration:none}
-.change-marker[data-type="punctuation"] .change-text{border-bottom:2px dotted var(--orange);text-decoration:none}
-.change-marker[data-type="wording"]   .change-text{border-bottom:2px wavy var(--blue);text-decoration:none}
-.change-marker[data-type="style"]     .change-text{border-bottom:2px dashed var(--purple);text-decoration:none}
-.change-marker[data-type="logic"]     .change-text{border-bottom:2px double var(--teal);text-decoration:none}
-.change-marker[data-type="dedup"]     .change-text{border-bottom:2px solid var(--purple);text-decoration:none;background:rgba(147,52,230,0.08)}
-.change-marker[data-type="deai"]      .change-text{border-bottom:2px wavy var(--teal);text-decoration:none;background:rgba(0,137,123,0.08)}
+.change-marker[data-type="grammar"]   .change-text{border-bottom:2.5px solid var(--red);text-decoration:none;background:rgba(217,48,37,0.06)}
+.change-marker[data-type="punctuation"] .change-text{border-bottom:2.5px dotted var(--orange);text-decoration:none;background:rgba(232,113,10,0.06)}
+.change-marker[data-type="wording"]   .change-text{border-bottom:2.5px wavy var(--blue);text-decoration:none;background:rgba(26,115,232,0.06)}
+.change-marker[data-type="style"]     .change-text{border-bottom:2.5px dashed var(--purple);text-decoration:none;background:rgba(147,52,230,0.06)}
+.change-marker[data-type="logic"]     .change-text{border-bottom:2.5px double var(--teal);text-decoration:none;background:rgba(0,137,123,0.06)}
+.change-marker[data-type="dedup"]     .change-text{border-bottom:2.5px solid var(--purple);text-decoration:none;background:rgba(147,52,230,0.08)}
+.change-marker[data-type="deai"]      .change-text{border-bottom:2.5px wavy var(--teal);text-decoration:none;background:rgba(0,137,123,0.08)}
 .change-marker.accepted .change-text{border-bottom-color:transparent}
 .change-marker.dismissed .change-text{border-bottom-color:transparent}
 
