@@ -12,6 +12,31 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function snapshotClipboard() {
+  const formats = clipboard.availableFormats();
+  return formats.map((format) => {
+    try {
+      return {
+        format,
+        data: Buffer.from(clipboard.readBuffer(format)),
+      };
+    } catch (_) {
+      return null;
+    }
+  }).filter(Boolean);
+}
+
+function restoreClipboard(snapshot) {
+  clipboard.clear();
+  for (const item of snapshot) {
+    try {
+      clipboard.writeBuffer(item.format, item.data);
+    } catch (_) {
+      // Skip formats that cannot be restored in the current environment.
+    }
+  }
+}
+
 /**
  * Get the identifier of the frontmost app (before our window takes focus).
  */
@@ -142,7 +167,7 @@ async function captureSelectedText() {
   await saveFrontApp();
   await getTextFieldBounds();
 
-  const savedText = clipboard.readText();
+  const savedClipboard = snapshotClipboard();
   const sentinel = `__POLISH_SENTINEL_${Date.now()}__`;
   clipboard.writeText(sentinel);
 
@@ -156,7 +181,8 @@ async function captureSelectedText() {
     }
     return captured;
   } finally {
-    setTimeout(() => clipboard.writeText(savedText), 500);
+    await sleep(50);
+    restoreClipboard(savedClipboard);
   }
 }
 
@@ -164,10 +190,16 @@ async function captureSelectedText() {
  * Paste text by writing to clipboard, re-focusing the original app, and simulating paste.
  */
 async function pasteText(text) {
+  const savedClipboard = snapshotClipboard();
   clipboard.writeText(text);
-  await sleep(100);
-  await restoreFrontApp();
-  await simulatePaste();
+  try {
+    await sleep(100);
+    await restoreFrontApp();
+    await simulatePaste();
+    await sleep(150);
+  } finally {
+    restoreClipboard(savedClipboard);
+  }
 }
 
 module.exports = { captureSelectedText, pasteText, getLastTextFieldBounds };

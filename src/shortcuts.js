@@ -9,19 +9,23 @@ class ShortcutManager {
     this.currentAccelerator = null;
   }
 
-  register() {
+  register(acceleratorOverride) {
     this.unregisterAll();
 
-    const accelerator = this.config.get('shortcut') || 'CommandOrControl+Shift+A';
+    const accelerator = acceleratorOverride || this.config.get('shortcut') || 'CommandOrControl+Shift+A';
     try {
       const ok = globalShortcut.register(accelerator, () => this.triggerCallback());
       if (ok) {
         this.currentAccelerator = accelerator;
+        return { success: true, accelerator };
       } else {
-        console.error(`快捷键注册失败: ${accelerator}`);
+        return {
+          success: false,
+          error: `快捷键注册失败，可能已被其他应用占用：${accelerator}`,
+        };
       }
     } catch (err) {
-      console.error(`快捷键注册异常: ${err.message}`);
+      return { success: false, error: `快捷键无效：${err.message}` };
     }
   }
 

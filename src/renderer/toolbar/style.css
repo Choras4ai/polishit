@@ -25,7 +25,7 @@ html, body {
 .toolbar {
   display: inline-flex;
   padding: 3px;
-  animation: toolbarIn 0.18s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation: toolbarIn 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .toolbar-inner {
@@ -49,9 +49,9 @@ html, body {
   border: none;
   background: transparent;
   color: var(--tb-fg);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
-  padding: 6px 12px;
+  padding: 6px 10px;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -79,6 +79,7 @@ html, body {
 
 .tool-label {
   line-height: 1;
+  white-space: nowrap;
 }
 
 /* ── Divider ── */
@@ -94,22 +95,25 @@ html, body {
 @keyframes toolbarIn {
   from {
     opacity: 0;
-    transform: translateY(6px) scale(0.92);
+    transform: translateY(10px) scale(0.985);
+    filter: blur(4px);
   }
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+    filter: blur(0);
   }
 }
 
 /* ── Exit animation ── */
 .toolbar.hiding .toolbar-inner {
-  animation: toolbarOut 0.12s ease-in forwards;
+  animation: toolbarOut 0.2s ease-in forwards;
 }
 
 @keyframes toolbarOut {
   to {
     opacity: 0;
-    transform: translateY(4px) scale(0.95);
+    transform: translateY(8px) scale(0.99);
+    filter: blur(3px);
   }
 }

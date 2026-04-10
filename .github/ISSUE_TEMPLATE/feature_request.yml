@@ -1,0 +1,25 @@
+name: Feature request
+description: 提出功能建议
+title: "[Feature] "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 你想解决什么问题
+      description: 先说使用场景，再说想法。
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 你的方案
+      description: 尽量具体，说明交互、配置项、兼容性需求。
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 备选方案
+      description: 有其它可接受方案也可以写在这里。

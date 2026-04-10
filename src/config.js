@@ -14,9 +14,15 @@ const DEFAULTS = {
     mode: 'single',
     temperature: 0.3,
     task: 'polish',
+    customPrompts: {
+      polish: '',
+      dedup: '',
+      deai: '',
+    },
   },
   ui: {
     theme: 'system',
+    floatingToolbarEnabled: true,
   },
   onboarding: {
     completed: false,

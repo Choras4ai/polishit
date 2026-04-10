@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'">
-  <title>润石</title>
+  <title>润石 PoliShit</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -13,15 +13,15 @@
   <header class="titlebar" id="titlebar">
     <div class="titlebar-left">
       <span class="app-icon">润</span>
-      <span class="titlebar-label">润石</span>
+      <span class="titlebar-label">润石 PoliShit</span>
       <span class="badge" id="changeBadge"></span>
     </div>
     <div class="titlebar-right">
       <!-- Mode toggle -->
       <div class="mode-toggle" id="modeToggle">
         <button class="mode-btn active" data-task="polish" title="润色模式">润色</button>
-        <button class="mode-btn" data-task="dedup" title="改写模式">改写</button>
-        <button class="mode-btn" data-task="deai" title="风格优化模式">优化</button>
+        <button class="mode-btn" data-task="dedup" title="降重">降重</button>
+        <button class="mode-btn" data-task="deai" title="降AI率（图一乐版）">降AI率（图一乐版）</button>
       </div>
       <button class="icon-btn" id="btnSettings" title="设置">
         <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
@@ -68,6 +68,7 @@
         <div class="pane-actions">
           <button class="btn-sm btn-sm-ghost" id="btnRejectAll">全部忽略</button>
           <button class="btn-sm btn-sm-accent" id="btnAcceptAll">全部接受</button>
+          <button class="btn-sm btn-sm-primary" id="btnApplyAccepted" disabled title="应用已接受的修改并替换原文">确认选用</button>
         </div>
       </div>
       <div class="diff-body" id="diffBody"></div>

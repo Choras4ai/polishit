@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, ipcMain, clipboard } = require('electron');
+const { app, ipcMain, clipboard, shell, systemPreferences } = require('electron');
 const ConfigStore = require('./src/config');
 const WindowManager = require('./src/windows');
 const ShortcutManager = require('./src/shortcuts');
@@ -10,6 +10,8 @@ const { captureSelectedText, pasteText, getLastTextFieldBounds } = require('./sr
 const { AgentPipeline } = require('./src/ai/pipeline');
 const { createProvider } = require('./src/ai/provider-factory');
 const { PRESETS, PRESET_ORDER } = require('./src/ai/presets');
+
+const isMac = process.platform === 'darwin';
 
 // ── Single instance lock ──
 if (!app.requestSingleInstanceLock()) {
@@ -22,26 +24,56 @@ const config = new ConfigStore();
 let windowManager, shortcutManager, trayManager, selectionWatcher;
 let isProcessing = false;
 let lastOriginalText = '';
+let lastSelectionAnchor = null;
+let lastFieldBounds = null;
+let lastSelectionSnapshot = null;
+let pendingToolbarSnapshot = null;
+let toolbarShowTimer = null;
 
 // ── App lifecycle ──
 app.whenReady().then(() => {
-  if (process.platform === 'darwin') {
+  if (isMac) {
     app.dock.hide();
   }
 
   windowManager = new WindowManager();
   shortcutManager = new ShortcutManager(config, handleTrigger);
-  trayManager = new TrayManager(config, windowManager, shortcutManager);
+  trayManager = new TrayManager(config, windowManager, shortcutManager, handleToolbarToggle);
 
-  shortcutManager.register();
+  const shortcutResult = shortcutManager.register();
+  if (!shortcutResult?.success) {
+    console.error(shortcutResult?.error || '快捷键注册失败');
+  }
   trayManager.create();
   registerIPC();
 
   // Start selection watcher for floating toolbar
-  selectionWatcher = new SelectionWatcher();
+  selectionWatcher = new SelectionWatcher({
+    enabled: config.get('ui.floatingToolbarEnabled') !== false,
+  });
   selectionWatcher.start(
-    (sel) => windowManager.showToolbar({ x: sel.x, y: sel.y }),
-    () => windowManager.hideToolbarDelayed(),
+    (sel) => {
+      const snapshot = {
+        text: sel.text || '',
+        source: sel.source,
+        at: Date.now(),
+        point: { x: sel.x, y: sel.y },
+        bounds: sel.bounds || null,
+        fieldBounds: sel.fieldBounds || null,
+      };
+      lastSelectionSnapshot = snapshot;
+      lastSelectionAnchor = snapshot.bounds || { x: sel.x, y: sel.y, width: 1, height: 1 };
+      lastFieldBounds = sel.fieldBounds || null;
+      scheduleToolbarShow(snapshot);
+      if (sel.source === 'clipboard') {
+        windowManager.hideToolbarDelayed(5000);
+      }
+    },
+    () => {
+      clearToolbarShowTimer();
+      pendingToolbarSnapshot = null;
+      windowManager.hideToolbarDelayed();
+    },
   );
 
   // Show onboarding on first launch
@@ -64,20 +96,28 @@ app.on('second-instance', () => {
 });
 
 // ── Trigger handler ──
-async function handleTrigger() {
+async function handleTrigger(options = {}) {
   if (isProcessing) return;
   isProcessing = true;
+  clearToolbarShowTimer();
   selectionWatcher?.pause();
 
   try {
-    const text = await captureSelectedText();
+    const cachedSelection = getRecentSelectionSnapshot();
+    const shouldUseCached = options.preferCachedSelection === true
+      && cachedSelection
+      && cachedSelection.text
+      && cachedSelection.text.trim().length > 0;
+    const text = shouldUseCached ? cachedSelection.text : await captureSelectedText();
+    const anchorBounds = getResultAnchorBounds();
+    const resultMetrics = estimateResultWindowMetrics(text, anchorBounds);
     if (!text || text.trim().length === 0) {
-      await windowManager.showResult(getLastTextFieldBounds());
+      await windowManager.showResult(anchorBounds, resultMetrics);
       windowManager.sendToResult('polish:error', '未检测到选中的文本，请先选中需要润色的内容。');
       return;
     }
 
-    await windowManager.showResult(getLastTextFieldBounds());
+    await windowManager.showResult(anchorBounds, resultMetrics);
     windowManager.sendToResult('polish:original', text);
     windowManager.sendToResult('polish:progress', { stage: '正在分析文本...', percent: 5 });
     // Send current task mode so UI can display it
@@ -112,6 +152,80 @@ async function handleTrigger() {
   }
 }
 
+function getResultAnchorBounds() {
+  return lastSelectionAnchor || lastFieldBounds || getLastTextFieldBounds();
+}
+
+function getRecentSelectionSnapshot() {
+  if (!lastSelectionSnapshot) return null;
+  if (Date.now() - lastSelectionSnapshot.at > 8000) return null;
+  return lastSelectionSnapshot;
+}
+
+function clearToolbarShowTimer() {
+  if (toolbarShowTimer) {
+    clearTimeout(toolbarShowTimer);
+    toolbarShowTimer = null;
+  }
+}
+
+function scheduleToolbarShow(snapshot) {
+  clearToolbarShowTimer();
+  pendingToolbarSnapshot = snapshot;
+  toolbarShowTimer = setTimeout(() => {
+    toolbarShowTimer = null;
+    if (!pendingToolbarSnapshot || pendingToolbarSnapshot !== snapshot) return;
+    const current = getRecentSelectionSnapshot();
+    if (!current || current !== snapshot) return;
+    windowManager.showToolbar(
+      snapshot.bounds
+      || snapshot.fieldBounds
+      || {
+        x: snapshot.point.x,
+        y: snapshot.point.y,
+        width: 1,
+        height: 1,
+      },
+    );
+    pendingToolbarSnapshot = null;
+  }, 500);
+}
+
+function estimateResultWindowMetrics(text, anchorBounds) {
+  const normalized = (text || '').trim();
+  const lineCount = normalized ? normalized.split(/\r?\n/).length : 1;
+  const density = Math.max(lineCount, Math.ceil(normalized.length / 48));
+  const preferredWidth = 380;
+  const preferredHeight = Math.max(
+    240,
+    Math.min(620, 180 + density * 18),
+  );
+
+  return { preferredWidth, preferredHeight };
+}
+
+function getToolbarStatus() {
+  const enabled = config.get('ui.floatingToolbarEnabled') !== false;
+  return {
+    enabled,
+    platform: process.platform,
+    accessibilityTrusted: isMac ? systemPreferences.isTrustedAccessibilityClient(false) : null,
+    selectionMonitoringAvailable: isMac,
+    copyFallbackAvailable: true,
+  };
+}
+
+function handleToolbarToggle(enabled) {
+  const normalized = Boolean(enabled);
+  config.set('ui.floatingToolbarEnabled', normalized);
+  selectionWatcher?.setEnabled(normalized);
+  if (!normalized) {
+    windowManager?.hideToolbar();
+  }
+  trayManager?.refreshMenu();
+  return getToolbarStatus();
+}
+
 // ── IPC handlers ──
 function registerIPC() {
   ipcMain.handle('config:get', () => config.getAll());
@@ -130,9 +244,19 @@ function registerIPC() {
 
   ipcMain.handle('shortcut:get', () => config.get('shortcut'));
   ipcMain.handle('shortcut:set', (_e, acc) => {
+    const previousAccelerator = config.get('shortcut') || 'CommandOrControl+Shift+A';
+    const result = shortcutManager.register(acc);
+    if (!result?.success) {
+      const rollback = shortcutManager.register(previousAccelerator);
+      if (!rollback?.success) {
+        console.error(rollback?.error || '快捷键回滚失败');
+      }
+      return result;
+    }
+
     config.set('shortcut', acc);
-    shortcutManager.register();
-    return { success: true };
+    trayManager?.refreshMenu();
+    return result;
   });
 
   ipcMain.handle('ai:test-connection', async () => {
@@ -196,6 +320,9 @@ function registerIPC() {
       config.set('provider.preset', presetId);
       config.set('provider.apiUrl', preset.apiUrl);
       config.set('provider.model', preset.model);
+      if (!preset.needsKey) {
+        config.set('provider.apiKey', '');
+      }
     }
     config.set('onboarding.completed', true);
     windowManager.hideOnboarding();
@@ -209,6 +336,28 @@ function registerIPC() {
     // Set the task mode
     config.set('pipeline.task', task);
     // Trigger the main processing flow
-    handleTrigger();
+    handleTrigger({ preferCachedSelection: true });
+  });
+
+  ipcMain.handle('toolbar:get-status', () => getToolbarStatus());
+  ipcMain.handle('toolbar:set-enabled', (_e, enabled) => handleToolbarToggle(enabled));
+  ipcMain.handle('toolbar:open-accessibility-settings', async () => {
+    if (isMac) {
+      try {
+        systemPreferences.isTrustedAccessibilityClient(true);
+      } catch (_) {
+        // Ignore prompt errors and still attempt to open System Settings.
+      }
+
+      try {
+        await shell.openExternal(
+          'x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility',
+        );
+      } catch (_) {
+        // Ignore failures; the user can still navigate manually.
+      }
+    }
+
+    return getToolbarStatus();
   });
 }

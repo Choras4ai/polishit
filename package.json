@@ -1,11 +1,12 @@
 {
   "name": "runshi",
   "version": "1.4.0",
-  "description": "润石 - 润色构石，构石虽糙，一润成文",
+  "description": "润石 PoliShit - 润色构石，构石虽糙，一润成文",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "dev": "NODE_ENV=development electron .",
+    "test": "node --test",
     "build": "electron-builder",
     "build:mac": "electron-builder --mac",
     "build:win": "electron-builder --win",
@@ -20,16 +21,18 @@
   },
   "build": {
     "appId": "com.runshi.app",
-    "productName": "润石",
+    "productName": "润石 PoliShit",
     "mac": {
       "category": "public.app-category.productivity",
       "target": [
         "dmg"
       ],
+      "artifactName": "润石 PoliShit-${version}-${arch}.${ext}",
       "darkModeSupport": true,
       "icon": "assets/icon-1024.png"
     },
     "win": {
+      "artifactName": "润石 PoliShit Setup ${version}.${ext}",
       "target": [
         {
           "target": "nsis",
@@ -43,12 +46,13 @@
       "perMachine": false,
       "allowToChangeInstallationDirectory": false,
       "createDesktopShortcut": true,
-      "shortcutName": "润石"
+      "shortcutName": "润石 PoliShit"
     },
     "files": [
       "main.js",
       "preload.js",
       "src/**/*",
+      "scripts/selection_probe.swift",
       "assets/**/*"
     ]
   }

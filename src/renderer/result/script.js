@@ -14,8 +14,8 @@ const TYPE_LABELS = {
   wording: '用词',
   style: '风格',
   logic: '逻辑',
-  dedup: '改写',
-  deai: '优化',
+  dedup: '降重',
+  deai: '降AI率（图一乐版）',
 };
 
 /* ────────── DOM refs ────────── */
@@ -50,7 +50,11 @@ modeToggle.addEventListener('click', (e) => {
   modeToggle.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   showView('loading');
-  loadingText.textContent = task === 'dedup' ? '正在改写处理...' : task === 'deai' ? '正在风格优化...' : '正在润色分析...';
+  loadingText.textContent = task === 'dedup'
+    ? '正在进行降重处理...'
+    : task === 'deai'
+      ? '正在进行降AI率（图一乐版）处理...'
+      : '正在润色分析...';
   progressFill.style.width = '5%';
   window.polishAPI.reprocess(task);
 });
@@ -391,7 +395,19 @@ function updateActionHint() {
   } else {
     actionHint.textContent = `共 ${total} 处修改建议`;
   }
+  const applyBtn = $('btnApplyAccepted');
+  applyBtn.disabled = accepted === 0;
+  applyBtn.textContent = accepted > 0 ? `确认选用 (${accepted})` : '确认选用';
 }
+
+/* ────────── Apply accepted changes (upper pane) ────────── */
+$('btnApplyAccepted').addEventListener('click', () => {
+  const accepted = diffChanges.filter(c => c.type !== 'equal' && c.status === 'accepted').length;
+  if (accepted === 0) return;
+  const finalText = computeFinalText();
+  window.polishAPI.replaceText(finalText);
+  window.polishAPI.closeResult();
+});
 
 /* ────────── Buttons ────────── */
 $('btnClose').addEventListener('click', () => window.polishAPI.closeResult());

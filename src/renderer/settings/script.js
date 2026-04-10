@@ -145,11 +145,47 @@ function showStatus(el, message, type) {
   }
 }
 
+function renderToolbarStatus(status) {
+  const enabled = status?.enabled !== false;
+  $('#floatingToolbarEnabled').checked = enabled;
+
+  let summary = '浮窗状态未知。';
+  let detail = '可通过快捷键继续触发处理。';
+
+  if (!enabled) {
+    summary = '浮窗已关闭。';
+    detail = '选中或复制文本后都不会自动弹出，仍可使用快捷键触发。';
+  } else if (status?.platform === 'darwin' && status?.accessibilityTrusted) {
+    summary = '浮窗已启用：选中文本或复制文本都可以触发。';
+    detail = '如果某些应用本身不暴露选区，仍可以先复制文本作为回退触发。';
+  } else if (status?.platform === 'darwin') {
+    summary = '尚未授予 macOS 辅助功能权限。';
+    detail = '当前可先通过复制文本触发浮窗；授予权限后，选中文本也会直接弹出。';
+  } else {
+    summary = '当前平台使用复制回退和快捷键触发。';
+    detail = '如果系统不支持选区监听，可先复制文本，或继续使用快捷键。';
+  }
+
+  $('#floatingToolbarStatus').textContent = summary;
+  $('#floatingToolbarStatusDetail').textContent = detail;
+  $('#btnOpenAccessibility').classList.toggle(
+    'hidden',
+    status?.platform !== 'darwin' || Boolean(status?.accessibilityTrusted),
+  );
+}
+
+async function refreshToolbarStatus() {
+  const status = await window.polishAPI.getToolbarStatus();
+  renderToolbarStatus(status);
+  return status;
+}
+
 // ── Load config ──
 async function loadConfig() {
-  const [config, { presets, order }] = await Promise.all([
+  const [config, { presets, order }, toolbarStatus] = await Promise.all([
     window.polishAPI.getConfig(),
     window.polishAPI.getPresets(),
+    window.polishAPI.getToolbarStatus(),
   ]);
 
   presetsData = presets;
@@ -194,6 +230,11 @@ async function loadConfig() {
   const temp = config.pipeline?.temperature ?? 0.3;
   $('#temperature').value = Math.round(temp * 10);
   $('#tempValue').textContent = temp.toFixed(1);
+  $('#customPromptPolish').value = config.pipeline?.customPrompts?.polish || '';
+  $('#customPromptDedup').value = config.pipeline?.customPrompts?.dedup || '';
+  $('#customPromptDeai').value = config.pipeline?.customPrompts?.deai || '';
+
+  renderToolbarStatus(toolbarStatus);
 }
 
 // ── Save provider config (shared by Save + Test) ──
@@ -201,12 +242,13 @@ async function saveProviderConfig() {
   const presetId = $('#presetSelect').value;
   const preset = presetsData[presetId];
   const isBuiltin = presetId === 'together' || presetId === 'siliconflow';
+  const apiKey = preset?.needsKey ? $('#apiKey').value.trim() : '';
 
   await window.polishAPI.setConfig('provider.preset', presetId);
   // For built-in free presets, always force preset URL/model to prevent cost overrun
   await window.polishAPI.setConfig('provider.apiUrl', isBuiltin ? preset.apiUrl : ($('#apiUrl').value.trim() || preset?.apiUrl || ''));
   await window.polishAPI.setConfig('provider.model', isBuiltin ? preset.model : ($('#modelName').value.trim() || preset?.model || ''));
-  await window.polishAPI.setConfig('provider.apiKey', $('#apiKey').value.trim());
+  await window.polishAPI.setConfig('provider.apiKey', apiKey);
 }
 
 // ── Save API ──
@@ -251,7 +293,11 @@ $('#btnTest').addEventListener('click', async () => {
 $('#btnSaveShortcut').addEventListener('click', async () => {
   if (!pendingAccelerator) return;
   const status = $('#shortcutStatus');
-  await window.polishAPI.setShortcut(pendingAccelerator);
+  const result = await window.polishAPI.setShortcut(pendingAccelerator);
+  if (!result?.success) {
+    showStatus(status, result?.error || '快捷键注册失败', 'error');
+    return;
+  }
 
   const display = formatShortcut(pendingAccelerator);
   $('#currentShortcut').textContent = display;
@@ -264,16 +310,43 @@ $('#btnSaveShortcut').addEventListener('click', async () => {
   showStatus(status, '快捷键已更新', 'success');
 });
 
+$('#floatingToolbarEnabled').addEventListener('change', async (e) => {
+  const status = $('#advancedStatus');
+  const next = e.target.checked;
+  const result = await window.polishAPI.setToolbarEnabled(next);
+  renderToolbarStatus(result);
+  showStatus(status, next ? '浮窗已启用' : '浮窗已关闭', 'success');
+});
+
+$('#btnRefreshToolbarStatus').addEventListener('click', async () => {
+  const status = $('#advancedStatus');
+  await refreshToolbarStatus();
+  showStatus(status, '浮窗状态已刷新', 'success');
+});
+
+$('#btnOpenAccessibility').addEventListener('click', async () => {
+  const status = $('#advancedStatus');
+  showStatus(status, '正在打开系统设置...', '');
+  const result = await window.polishAPI.openAccessibilitySettings();
+  renderToolbarStatus(result);
+});
+
 // ── Save advanced ──
 $('#btnSaveAdvanced').addEventListener('click', async () => {
   const status = $('#advancedStatus');
   const task = $('input[name="taskMode"]:checked').value;
   const mode = $('input[name="pipelineMode"]:checked').value;
   const temp = parseInt($('#temperature').value, 10) / 10;
+  const customPromptPolish = $('#customPromptPolish').value.trim();
+  const customPromptDedup = $('#customPromptDedup').value.trim();
+  const customPromptDeai = $('#customPromptDeai').value.trim();
 
   await window.polishAPI.setConfig('pipeline.task', task);
   await window.polishAPI.setConfig('pipeline.mode', mode);
   await window.polishAPI.setConfig('pipeline.temperature', temp);
+  await window.polishAPI.setConfig('pipeline.customPrompts.polish', customPromptPolish);
+  await window.polishAPI.setConfig('pipeline.customPrompts.dedup', customPromptDedup);
+  await window.polishAPI.setConfig('pipeline.customPrompts.deai', customPromptDeai);
   showStatus(status, '已保存', 'success');
 });
 

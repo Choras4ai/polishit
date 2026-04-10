@@ -1,0 +1,59 @@
+name: Bug report
+description: 报告可复现的问题
+title: "[Bug] "
+labels:
+  - bug
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: 问题描述
+      description: 清楚描述实际表现和预期表现。
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: 应用版本
+      placeholder: 例如 1.4.0
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: 运行平台
+      options:
+        - macOS
+        - Windows
+        - 其他
+    validations:
+      required: true
+  - type: input
+    id: target_app
+    attributes:
+      label: 目标应用
+      placeholder: 例如 Chrome / Word / WPS / Obsidian
+  - type: dropdown
+    id: accessibility
+    attributes:
+      label: 是否已授予辅助功能权限
+      options:
+        - 是
+        - 否
+        - 不确定
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. 打开某个应用
+        2. 选中文本
+        3. 复制文本
+        4. 观察是否出现浮窗
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 补充信息
+      description: 可附截图、报错、日志、录屏说明。

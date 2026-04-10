@@ -243,6 +243,21 @@ class AgentPipeline {
     this.config = config;
   }
 
+  _getCustomPrompt(task) {
+    const prompt = this.config.get(`pipeline.customPrompts.${task}`);
+    return typeof prompt === 'string' ? prompt.trim() : '';
+  }
+
+  _withCustomPrompt(basePrompt, task) {
+    const customPrompt = this._getCustomPrompt(task);
+    if (!customPrompt) return basePrompt;
+    return `${basePrompt}
+
+# 用户额外要求
+以下偏好由当前用户额外指定，必须在不违背原始任务约束的前提下尽量满足：
+${customPrompt}`;
+  }
+
   /**
    * Sanitize AI output: detect when the model returns advice/instructions
    * instead of the actual rewritten text, and fall back to original.
@@ -335,7 +350,7 @@ class AgentPipeline {
     const userMsg = text + '\n\n【重要提醒：请直接输出润色后的文本，不要输出任何解释、建议或markdown格式。】';
     const result = await this.provider.chat(
       [
-        { role: 'system', content: POLISH_PROMPTS.singlePolish },
+        { role: 'system', content: this._withCustomPrompt(POLISH_PROMPTS.singlePolish, 'polish') },
         { role: 'user', content: userMsg },
       ],
       { temperature },
@@ -347,7 +362,7 @@ class AgentPipeline {
     onProgress({ stage: '语法检查中...', percent: 20 });
     const grammarFixed = await this.provider.chat(
       [
-        { role: 'system', content: POLISH_PROMPTS.grammarCheck },
+        { role: 'system', content: this._withCustomPrompt(POLISH_PROMPTS.grammarCheck, 'polish') },
         { role: 'user', content: text },
       ],
       { temperature: 0.15 },
@@ -356,7 +371,7 @@ class AgentPipeline {
     onProgress({ stage: '风格优化中...', percent: 45 });
     const styleEnhanced = await this.provider.chat(
       [
-        { role: 'system', content: POLISH_PROMPTS.styleEnhance },
+        { role: 'system', content: this._withCustomPrompt(POLISH_PROMPTS.styleEnhance, 'polish') },
         { role: 'user', content: grammarFixed.trim() },
       ],
       { temperature },
@@ -366,11 +381,11 @@ class AgentPipeline {
   }
 
   async _dedup(text, temperature, mode, onProgress) {
-    onProgress({ stage: '正在改写处理...', percent: 25 });
+    onProgress({ stage: '正在进行降重处理...', percent: 25 });
     const userMsg = text + '\n\n【重要提醒：请直接输出改写后的文本，不要输出任何解释、建议或markdown格式。】';
     const firstPass = await this.provider.chat(
       [
-        { role: 'system', content: DEDUP_PROMPTS.singleDedup },
+        { role: 'system', content: this._withCustomPrompt(DEDUP_PROMPTS.singleDedup, 'dedup') },
         { role: 'user', content: userMsg },
       ],
       { temperature: Math.max(temperature, 0.5) },  // 降重需要更高创造性
@@ -380,7 +395,7 @@ class AgentPipeline {
       onProgress({ stage: '结构化调整中...', percent: 50 });
       const secondPass = await this.provider.chat(
         [
-          { role: 'system', content: DEDUP_PROMPTS.structuralRewrite },
+          { role: 'system', content: this._withCustomPrompt(DEDUP_PROMPTS.structuralRewrite, 'dedup') },
           { role: 'user', content: `# 原文\n${text}\n\n# 初次改写\n${firstPass.trim()}` },
         ],
         { temperature: Math.max(temperature, 0.5) },
@@ -392,11 +407,11 @@ class AgentPipeline {
   }
 
   async _deAI(text, temperature, mode, onProgress) {
-    onProgress({ stage: '正在风格优化...', percent: 25 });
+    onProgress({ stage: '正在进行降AI率（图一乐版）处理...', percent: 25 });
     const userMsg = text + '\n\n【重要提醒：请直接输出改写后的文本，不要输出任何建议、解释、编号列表或markdown格式。】';
     const firstPass = await this.provider.chat(
       [
-        { role: 'system', content: DEAI_PROMPTS.singleDeAI },
+        { role: 'system', content: this._withCustomPrompt(DEAI_PROMPTS.singleDeAI, 'deai') },
         { role: 'user', content: userMsg },
       ],
       { temperature: Math.max(temperature, 0.6) },  // 需要更高创造性以模拟人类
@@ -406,7 +421,7 @@ class AgentPipeline {
       onProgress({ stage: '人性化调整中...', percent: 50 });
       const secondPass = await this.provider.chat(
         [
-          { role: 'system', content: DEAI_PROMPTS.humanizePass },
+          { role: 'system', content: this._withCustomPrompt(DEAI_PROMPTS.humanizePass, 'deai') },
           { role: 'user', content: `# 原文\n${text}\n\n# 初次改写\n${firstPass.trim()}` },
         ],
         { temperature: Math.max(temperature, 0.6) },

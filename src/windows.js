@@ -8,6 +8,7 @@ const isMac = process.platform === 'darwin';
 class WindowManager {
   constructor() {
     this.resultWindow = null;
+    this.resultAnchorBounds = null;
     this.settingsWindow = null;
     this.onboardingWindow = null;
     this.toolbarWindow = null;
@@ -17,26 +18,29 @@ class WindowManager {
   // ── Floating Toolbar ──
 
   /**
-   * Show the floating selection toolbar near a cursor position.
-   * @param {{ x: number, y: number }} pos - Screen coordinates of the cursor
+   * Show the floating selection toolbar near a selection anchor.
+   * @param {{ x: number, y: number, width?: number, height?: number }} anchor
    */
-  showToolbar(pos) {
+  showToolbar(anchor) {
     // Don't show if result window is already open
     if (this.resultWindow && !this.resultWindow.isDestroyed()) return;
 
     clearTimeout(this._toolbarHideTimer);
 
-    const winW = 250;
+    const winW = 340;
     const winH = 44;
+    const anchorRect = this._normalizeAnchorRect(anchor);
+    const point = this._anchorToPoint(anchorRect);
 
-    // Position above cursor, centered
-    const display = screen.getDisplayNearestPoint(pos);
+    // Position above the current selection, centered.
+    const display = screen.getDisplayNearestPoint(point);
     const area = display.workArea;
-    let x = Math.round(pos.x - winW / 2);
-    let y = Math.round(pos.y - winH - 12);  // 12px above cursor
+    let x = Math.round(point.x - winW / 2);
+    let y = Math.round((anchorRect?.y ?? point.y) - winH - 10);
 
-    // If above would overflow, place below
-    if (y < area.y) y = pos.y + 18;
+    if (y < area.y + 6) {
+      y = Math.round((anchorRect?.y ?? point.y) + (anchorRect?.height ?? 0) + 14);
+    }
     // Clamp horizontally
     if (x < area.x + 4) x = area.x + 4;
     if (x + winW > area.x + area.width - 4) x = area.x + area.width - winW - 4;
@@ -101,59 +105,32 @@ class WindowManager {
   }
 
   /**
-   * Show result panel positioned over the source text field (Grammarly-style).
-   * @param {Object|null} textFieldBounds - {x, y, width, height} of the focused text area
+   * Show result panel positioned near the current text selection.
+   * @param {Object|null} anchorBounds - {x, y, width, height} of the selection/text area
+   * @param {Object} options - preferred floating window size
    */
-  async showResult(textFieldBounds) {
+  async showResult(anchorBounds, options = {}) {
+    this.resultAnchorBounds = this._normalizeAnchorRect(anchorBounds);
+    const resultBounds = this._computeResultBounds(this.resultAnchorBounds, options);
+
     if (this.resultWindow && !this.resultWindow.isDestroyed()) {
-      this.resultWindow.focus();
+      this.resultWindow.setBounds(resultBounds);
+      this.resultWindow.showInactive();
       return;
     }
 
-    const winW = 380;
-    let x, y, winH;
-
-    if (textFieldBounds && textFieldBounds.width > 0) {
-      // Grammarly-style: overlap the right edge of the text field
-      const tfRight = textFieldBounds.x + textFieldBounds.width;
-      x = tfRight - winW;  // overlap right side of text area
-      y = textFieldBounds.y;
-      winH = Math.max(400, textFieldBounds.height);
-
-      // Ensure minimum overlap and not off-screen
-      const display = screen.getDisplayNearestPoint({ x, y });
-      const area = display.workArea;
-
-      // If text field is too narrow, position at its right edge
-      if (textFieldBounds.width < winW + 100) {
-        x = tfRight - winW;
-      }
-
-      // Clamp to screen bounds
-      if (x < area.x) x = area.x;
-      if (x + winW > area.x + area.width) x = area.x + area.width - winW;
-      if (y < area.y) y = area.y;
-      if (winH > area.height) winH = area.height;
-      if (y + winH > area.y + area.height) y = area.y + area.height - winH;
-    } else {
-      // Fallback: right-side sidebar
-      const display = screen.getPrimaryDisplay();
-      const area = display.workArea;
-      winH = area.height;
-      x = area.x + area.width - winW;
-      y = area.y;
-    }
-
     this.resultWindow = new BrowserWindow({
-      width: winW,
-      height: winH,
-      x, y,
+      width: resultBounds.width,
+      height: resultBounds.height,
+      x: resultBounds.x,
+      y: resultBounds.y,
       frame: false,
       resizable: true,
       minimizable: false,
       maximizable: false,
       alwaysOnTop: true,
       skipTaskbar: true,
+      show: false,
       ...(isMac
         ? { vibrancy: 'under-window', visualEffectState: 'active', backgroundColor: '#00000000' }
 
@@ -190,12 +167,81 @@ class WindowManager {
       this.resultWindow.close();
       this.resultWindow = null;
     }
+    this.resultAnchorBounds = null;
   }
 
   sendToResult(channel, data) {
     if (this.resultWindow && !this.resultWindow.isDestroyed()) {
       this.resultWindow.webContents.send(channel, data);
     }
+  }
+
+  _normalizeAnchorRect(anchor) {
+    if (!anchor) return null;
+    const x = Number(anchor.x);
+    const y = Number(anchor.y);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+    const width = Math.max(1, Number(anchor.width) || 1);
+    const height = Math.max(1, Number(anchor.height) || 1);
+    return {
+      x: Math.round(x),
+      y: Math.round(y),
+      width: Math.round(width),
+      height: Math.round(height),
+    };
+  }
+
+  _anchorToPoint(anchor) {
+    if (!anchor) return screen.getCursorScreenPoint();
+    return {
+      x: Math.round(anchor.x + anchor.width / 2),
+      y: Math.round(anchor.y + anchor.height / 2),
+    };
+  }
+
+  _computeResultBounds(anchorBounds, options = {}) {
+    const width = 380;
+    const height = Math.max(220, Math.min(620, Math.round(options.preferredHeight || 320)));
+    const point = this._anchorToPoint(anchorBounds);
+    const display = screen.getDisplayNearestPoint(point);
+    const area = display.workArea;
+    const margin = 12;
+
+    let x;
+    let y;
+
+    if (anchorBounds) {
+      const anchorRight = anchorBounds.x + anchorBounds.width;
+      const anchorBottom = anchorBounds.y + anchorBounds.height;
+      const spaceRight = area.x + area.width - anchorRight;
+      const spaceLeft = anchorBounds.x - area.x;
+      const belowY = anchorBottom + 14;
+      const aboveY = anchorBounds.y - height - 14;
+
+      if (spaceRight >= width + 16) {
+        x = anchorRight + 14;
+      } else if (spaceLeft >= width + 16) {
+        x = anchorBounds.x - width - 14;
+      } else {
+        x = Math.round(anchorBounds.x + anchorBounds.width / 2 - width / 2);
+      }
+
+      if (belowY + height <= area.y + area.height - margin) {
+        y = belowY;
+      } else if (aboveY >= area.y + margin) {
+        y = aboveY;
+      } else {
+        y = Math.round(anchorBounds.y + anchorBounds.height / 2 - height / 2);
+      }
+    } else {
+      x = area.x + area.width - width - 24;
+      y = area.y + 24;
+    }
+
+    x = Math.max(area.x + margin, Math.min(x, area.x + area.width - width - margin));
+    y = Math.max(area.y + margin, Math.min(y, area.y + area.height - height - margin));
+
+    return { x, y, width, height };
   }
 
   showSettings() {
@@ -206,7 +252,7 @@ class WindowManager {
 
     this.settingsWindow = new BrowserWindow({
       width: 520,
-      height: 580,
+      height: 700,
       resizable: false,
       minimizable: false,
       ...(isMac

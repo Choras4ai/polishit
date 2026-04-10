@@ -52,4 +52,7 @@ contextBridge.exposeInMainWorld('polishAPI', {
 
   // Toolbar
   toolbarAction: (task) => ipcRenderer.invoke('toolbar:action', task),
+  getToolbarStatus: () => ipcRenderer.invoke('toolbar:get-status'),
+  setToolbarEnabled: (enabled) => ipcRenderer.invoke('toolbar:set-enabled', enabled),
+  openAccessibilitySettings: () => ipcRenderer.invoke('toolbar:open-accessibility-settings'),
 });

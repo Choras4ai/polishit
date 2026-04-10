@@ -6,10 +6,11 @@ const path = require('path');
 const isMac = process.platform === 'darwin';
 
 class TrayManager {
-  constructor(config, windowManager, shortcutManager) {
+  constructor(config, windowManager, shortcutManager, onToggleToolbar) {
     this.config = config;
     this.windowManager = windowManager;
     this.shortcutManager = shortcutManager;
+    this.onToggleToolbar = onToggleToolbar;
     this.tray = null;
   }
 
@@ -24,11 +25,13 @@ class TrayManager {
       icon = nativeImage.createEmpty();
     }
     this.tray = new Tray(icon);
-    this.tray.setToolTip('润石');
-    this._buildMenu();
+    this.tray.setToolTip('润石 PoliShit');
+    this.refreshMenu();
   }
 
-  _buildMenu() {
+  refreshMenu() {
+    if (!this.tray) return;
+
     const shortcut = this.config.get('shortcut') || 'CommandOrControl+Shift+A';
     let display;
     if (isMac) {
@@ -44,8 +47,14 @@ class TrayManager {
     }
 
     const menu = Menu.buildFromTemplate([
-      { label: `润石  ${display}`, enabled: false },
+      { label: `润石 PoliShit  ${display}`, enabled: false },
       { type: 'separator' },
+      {
+        label: '浮窗工具栏',
+        type: 'checkbox',
+        checked: this.config.get('ui.floatingToolbarEnabled') !== false,
+        click: (item) => this.onToggleToolbar?.(item.checked),
+      },
       { label: '设置…', click: () => this.windowManager.showSettings() },
       { type: 'separator' },
       {

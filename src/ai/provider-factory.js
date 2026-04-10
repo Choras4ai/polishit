@@ -14,17 +14,22 @@ function createProvider(providerConfig) {
   const presetId = providerConfig?.preset || 'custom';
   const preset = PRESETS[presetId];
   const providerType = preset?.providerType || providerConfig?.type || 'openai';
+  const useBuiltinProviderConfig = presetId === 'together' || presetId === 'siliconflow';
 
-  // Resolve API key: built-in for Together AI / SiliconFlow, user-provided for others
+  // Built-in free providers should always use their bundled credentials and defaults.
   let apiKey = providerConfig?.apiKey || '';
-  if (presetId === 'together' && !apiKey) {
+  if (presetId === 'together') {
     apiKey = getBuiltinKey();
-  } else if (presetId === 'siliconflow' && !apiKey) {
+  } else if (presetId === 'siliconflow') {
     apiKey = getSiliconFlowKey();
   }
 
-  const apiUrl = providerConfig?.apiUrl || preset?.apiUrl || '';
-  const model = providerConfig?.model || preset?.model || '';
+  const apiUrl = useBuiltinProviderConfig
+    ? (preset?.apiUrl || '')
+    : (providerConfig?.apiUrl || preset?.apiUrl || '');
+  const model = useBuiltinProviderConfig
+    ? (preset?.model || '')
+    : (providerConfig?.model || preset?.model || '');
 
   switch (providerType) {
     case 'openai':
