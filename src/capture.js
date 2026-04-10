@@ -53,8 +53,7 @@ async function saveFrontApp() {
     } else if (isWin) {
       // PowerShell: get foreground window handle
       const { stdout } = await execAsync(
-        'powershell -NoProfile -Command "Add-Type -TypeDefinition \'using System;using System.Runtime.InteropServices;public class WinAPI{[DllImport(\\\"user32.dll\\\")]public static extern IntPtr GetForegroundWindow();}\'; [WinAPI]::GetForegroundWindow().ToInt64()"',
-      );
+        'powershell -NoProfile -Command "Add-Type -TypeDefinition \'using System;using System.Runtime.InteropServices;public class WinAPI{[DllImport(\\\"user32.dll\\\")]public static extern IntPtr GetForegroundWindow();}\'; [WinAPI]::GetForegroundWindow().ToInt64()"',        { windowsHide: true },      );
       lastFrontApp = stdout.trim();
     }
   } catch (_) {
@@ -121,6 +120,7 @@ async function restoreFrontApp() {
     } else if (isWin) {
       await execAsync(
         `powershell -NoProfile -Command "Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;public class WinAPI{[DllImport(\\\"user32.dll\\\")]public static extern bool SetForegroundWindow(IntPtr hWnd);}'; [WinAPI]::SetForegroundWindow([IntPtr]::new(${lastFrontApp}))"`,
+        { windowsHide: true },
       );
     }
     await sleep(300);
@@ -140,6 +140,7 @@ async function simulateCopy() {
   } else if (isWin) {
     await execAsync(
       'powershell -NoProfile -Command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait(\'^c\')"',
+      { windowsHide: true },
     );
   }
 }
@@ -155,6 +156,7 @@ async function simulatePaste() {
   } else if (isWin) {
     await execAsync(
       'powershell -NoProfile -Command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait(\'^v\')"',
+      { windowsHide: true },
     );
   }
 }
@@ -173,7 +175,8 @@ async function captureSelectedText() {
 
   try {
     await simulateCopy();
-    await sleep(250);
+    // Windows PowerShell SendKeys is slower; give extra time for clipboard to update
+    await sleep(isWin ? 450 : 250);
     const captured = clipboard.readText();
 
     if (captured === sentinel) {

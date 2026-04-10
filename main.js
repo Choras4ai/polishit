@@ -201,10 +201,12 @@ function estimateResultWindowMetrics(text, anchorBounds) {
   const normalized = (text || '').trim();
   const lineCount = normalized ? normalized.split(/\r?\n/).length : 1;
   const density = Math.max(lineCount, Math.ceil(normalized.length / 60));
-  const preferredWidth = Math.max(520, Math.min(680, 480 + Math.ceil(normalized.length / 200) * 20));
+  // Result contains annotations (~2x) + full revised text (~1x) ≈ 3x original density
+  const contentDensity = Math.ceil(density * 2.8);
+  const preferredWidth = Math.max(560, Math.min(720, 500 + Math.ceil(normalized.length / 150) * 20));
   const preferredHeight = Math.max(
-    300,
-    Math.min(800, 220 + density * 22),
+    420,
+    Math.min(960, 260 + contentDensity * 22),
   );
 
   return { preferredWidth, preferredHeight };
