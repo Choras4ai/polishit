@@ -243,6 +243,50 @@ class AgentPipeline {
     this.config = config;
   }
 
+  /**
+   * Sanitize AI output: detect when the model returns advice/instructions
+   * instead of the actual rewritten text, and fall back to original.
+   */
+  _sanitizeOutput(output, original) {
+    const trimmed = output.trim();
+    if (!trimmed) return original;
+
+    // Detect obvious "advice" patterns (model didn't follow instructions)
+    const advicePatterns = [
+      /^(以下|下面|这里)是/,           // "以下是..."
+      /^(好的|当然|没问题)[，,。！]/,    // "好的，..."
+      /在这个基础上/,
+      /你可以考虑以下/,
+      /\*\*.*?\*\*/,                    // markdown bold
+      /^\d+\.\s+\*\*/m,               // numbered list with bold
+      /通过这些方法/,
+      /需要谨慎实施/,
+      /以下几点/,
+    ];
+
+    let adviceScore = 0;
+    for (const pattern of advicePatterns) {
+      if (pattern.test(trimmed)) adviceScore++;
+    }
+
+    // If 3+ advice patterns detected, the model clearly didn't rewrite
+    if (adviceScore >= 3) {
+      return original;
+    }
+
+    // If output is much longer than input (>3x), likely contains explanation
+    if (trimmed.length > original.length * 3) {
+      // Try to extract just the first paragraph as the actual rewrite
+      const firstPara = trimmed.split(/\n\n/)[0].trim();
+      if (firstPara.length >= original.length * 0.5 && firstPara.length <= original.length * 2) {
+        return firstPara;
+      }
+      return original;
+    }
+
+    return trimmed;
+  }
+
   async process(text, onProgress, taskOverride) {
     const task = taskOverride || this.config.get('pipeline.task') || 'polish';
     const mode = this.config.get('pipeline.mode') || 'single';
@@ -258,6 +302,9 @@ class AgentPipeline {
     } else {
       polishedText = await this._singleAgent(text, temperature, onProgress);
     }
+
+    // Sanitize: detect when model returns advice instead of rewritten text
+    polishedText = this._sanitizeOutput(polishedText, text);
 
     // Compute diff
     onProgress({ stage: '正在分析修改...', percent: 70 });
@@ -285,10 +332,11 @@ class AgentPipeline {
 
   async _singleAgent(text, temperature, onProgress) {
     onProgress({ stage: '正在润色文本...', percent: 30 });
+    const userMsg = text + '\n\n【重要提醒：请直接输出润色后的文本，不要输出任何解释、建议或markdown格式。】';
     const result = await this.provider.chat(
       [
         { role: 'system', content: POLISH_PROMPTS.singlePolish },
-        { role: 'user', content: text },
+        { role: 'user', content: userMsg },
       ],
       { temperature },
     );
@@ -318,11 +366,12 @@ class AgentPipeline {
   }
 
   async _dedup(text, temperature, mode, onProgress) {
-    onProgress({ stage: '正在降重改写...', percent: 25 });
+    onProgress({ stage: '正在改写处理...', percent: 25 });
+    const userMsg = text + '\n\n【重要提醒：请直接输出改写后的文本，不要输出任何解释、建议或markdown格式。】';
     const firstPass = await this.provider.chat(
       [
         { role: 'system', content: DEDUP_PROMPTS.singleDedup },
-        { role: 'user', content: text },
+        { role: 'user', content: userMsg },
       ],
       { temperature: Math.max(temperature, 0.5) },  // 降重需要更高创造性
     );
@@ -343,11 +392,12 @@ class AgentPipeline {
   }
 
   async _deAI(text, temperature, mode, onProgress) {
-    onProgress({ stage: '正在降低AI痕迹...', percent: 25 });
+    onProgress({ stage: '正在风格优化...', percent: 25 });
+    const userMsg = text + '\n\n【重要提醒：请直接输出改写后的文本，不要输出任何建议、解释、编号列表或markdown格式。】';
     const firstPass = await this.provider.chat(
       [
         { role: 'system', content: DEAI_PROMPTS.singleDeAI },
-        { role: 'user', content: text },
+        { role: 'user', content: userMsg },
       ],
       { temperature: Math.max(temperature, 0.6) },  // 需要更高创造性以模拟人类
     );
