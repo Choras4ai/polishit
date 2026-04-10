@@ -76,9 +76,11 @@ app.whenReady().then(() => {
     },
   );
 
-  // Show onboarding on first launch
+  // Show onboarding on first launch, otherwise show home
   if (!config.get('onboarding.completed')) {
     windowManager.showOnboarding();
+  } else {
+    windowManager.showHome();
   }
 });
 
@@ -92,13 +94,8 @@ app.on('will-quit', () => {
 });
 
 app.on('second-instance', () => {
-  // Only bring an existing visible window to front; don't auto-open settings
-  if (windowManager?.settingsWindow && !windowManager.settingsWindow.isDestroyed()) {
-    windowManager.settingsWindow.focus();
-  } else if (windowManager?.resultWindow && !windowManager.resultWindow.isDestroyed()) {
-    windowManager.resultWindow.focus();
-  }
-  // else: app is running silently in tray – do nothing
+  // Show home window when user launches a second instance
+  windowManager?.showHome();
 });
 
 // ── Trigger handler ──
@@ -236,7 +233,11 @@ function handleToolbarToggle(enabled) {
 
 // ── IPC handlers ──
 function registerIPC() {
-  ipcMain.handle('config:get', () => config.getAll());
+  ipcMain.handle('config:get', () => {
+    const all = config.getAll();
+    all.appVersion = app.getVersion();
+    return all;
+  });
   ipcMain.handle('config:set', (_e, key, value) => config.set(key, value));
 
   ipcMain.handle('action:replace', async (_e, text) => {
@@ -248,6 +249,7 @@ function registerIPC() {
   ipcMain.handle('action:copy', (_e, text) => clipboard.writeText(text));
 
   ipcMain.handle('window:open-settings', () => windowManager.showSettings());
+  ipcMain.handle('window:open-home', () => windowManager.showHome());
 
   ipcMain.handle('shell:open-external', (_e, url) => {
     // Only allow https URLs to prevent arbitrary command execution
@@ -341,6 +343,7 @@ function registerIPC() {
     }
     config.set('onboarding.completed', true);
     windowManager.hideOnboarding();
+    windowManager.showHome();
   });
 
   ipcMain.handle('window:open-onboarding', () => windowManager.showOnboarding());

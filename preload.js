@@ -30,6 +30,7 @@ contextBridge.exposeInMainWorld('polishAPI', {
   copyText: (text) => ipcRenderer.invoke('action:copy', text),
   reprocess: (task) => ipcRenderer.invoke('action:reprocess', task),
   openSettings: () => ipcRenderer.invoke('window:open-settings'),
+  openHome: () => ipcRenderer.invoke('window:open-home'),
   closeResult: () => ipcRenderer.invoke('window:close-result'),
 
   // Task

@@ -49,6 +49,7 @@ class TrayManager {
     const menu = Menu.buildFromTemplate([
       { label: `润石 PoliShit  ${display}`, enabled: false },
       { type: 'separator' },
+      { label: '主页', click: () => this.windowManager.showHome() },
       {
         label: '浮窗工具栏',
         type: 'checkbox',

@@ -12,6 +12,7 @@ class WindowManager {
     this.settingsWindow = null;
     this.onboardingWindow = null;
     this.toolbarWindow = null;
+    this.homeWindow = null;
     this._toolbarHideTimer = null;
   }
 
@@ -244,11 +245,60 @@ class WindowManager {
     return { x, y, width, height };
   }
 
+  // ── Home Window ──
+
+  showHome() {
+    if (this.homeWindow && !this.homeWindow.isDestroyed()) {
+      this.homeWindow.show();
+      this.homeWindow.focus();
+      return;
+    }
+
+    if (isMac) app.dock.show();
+
+    this.homeWindow = new BrowserWindow({
+      width: 420,
+      height: 520,
+      resizable: false,
+      minimizable: true,
+      maximizable: false,
+      ...(isMac
+        ? { titleBarStyle: 'hiddenInset', vibrancy: 'under-window', visualEffectState: 'active' }
+        : { titleBarStyle: 'hidden' }),
+      show: false,
+      webPreferences: {
+        preload: path.join(__dirname, '..', 'preload.js'),
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: true,
+      },
+    });
+
+    this.homeWindow.loadFile(
+      path.join(__dirname, 'renderer', 'home', 'index.html'),
+    );
+
+    this.homeWindow.once('ready-to-show', () => this.homeWindow.show());
+    this.homeWindow.on('closed', () => {
+      this.homeWindow = null;
+      this._hideDockIfNoWindows();
+    });
+  }
+
+  hideHome() {
+    if (this.homeWindow && !this.homeWindow.isDestroyed()) {
+      this.homeWindow.close();
+      this.homeWindow = null;
+    }
+  }
+
   showSettings() {
     if (this.settingsWindow && !this.settingsWindow.isDestroyed()) {
       this.settingsWindow.focus();
       return;
     }
+
+    if (isMac) app.dock.show();
 
     this.settingsWindow = new BrowserWindow({
       width: 520,
@@ -313,7 +363,7 @@ class WindowManager {
   /** Hide dock icon when no visible normal windows remain. */
   _hideDockIfNoWindows() {
     if (!isMac) return;
-    const hasVisible = [this.settingsWindow, this.onboardingWindow].some(
+    const hasVisible = [this.homeWindow, this.settingsWindow, this.onboardingWindow].some(
       w => w && !w.isDestroyed(),
     );
     if (!hasVisible) {

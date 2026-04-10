@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'">
+  <title>润石 PoliShit</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="titlebar-spacer"></div>
+
+  <main class="home">
+    <!-- Hero -->
+    <div class="hero">
+      <div class="app-icon">润</div>
+      <h1>润石 PoliShit</h1>
+      <p class="slogan">润色构石，构石虽糙，一润成文。</p>
+    </div>
+
+    <!-- Status -->
+    <div class="status-card" id="statusCard">
+      <div class="status-row">
+        <span class="status-label">快捷键</span>
+        <span class="status-value" id="shortcutDisplay">–</span>
+      </div>
+      <div class="status-row">
+        <span class="status-label">AI 服务商</span>
+        <span class="status-value" id="presetDisplay">–</span>
+      </div>
+      <div class="status-row">
+        <span class="status-label">浮窗工具栏</span>
+        <span class="status-value" id="toolbarDisplay">–</span>
+      </div>
+    </div>
+
+    <!-- Usage hint -->
+    <div class="usage-hint">
+      <div class="hint-icon">💡</div>
+      <p>选中任意中文文本，按下快捷键即可开始润色。<br>
+      也可以复制文本后等待浮窗工具栏出现。</p>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions">
+      <button class="btn btn-primary" id="btnSettings">⚙ 设置</button>
+      <button class="btn btn-secondary" id="btnHelp">📖 使用帮助</button>
+    </div>
+
+    <p class="version" id="versionText">–</p>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
