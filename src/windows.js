@@ -1,6 +1,6 @@
 'use strict';
 
-const { BrowserWindow, screen } = require('electron');
+const { app, BrowserWindow, screen } = require('electron');
 const path = require('path');
 
 const isMac = process.platform === 'darwin';
@@ -270,7 +270,10 @@ class WindowManager {
       path.join(__dirname, 'renderer', 'settings', 'index.html'),
     );
 
-    this.settingsWindow.on('closed', () => { this.settingsWindow = null; });
+    this.settingsWindow.on('closed', () => {
+      this.settingsWindow = null;
+      this._hideDockIfNoWindows();
+    });
   }
 
   showOnboarding() {
@@ -301,7 +304,21 @@ class WindowManager {
     );
 
     this.onboardingWindow.once('ready-to-show', () => this.onboardingWindow.show());
-    this.onboardingWindow.on('closed', () => { this.onboardingWindow = null; });
+    this.onboardingWindow.on('closed', () => {
+      this.onboardingWindow = null;
+      this._hideDockIfNoWindows();
+    });
+  }
+
+  /** Hide dock icon when no visible normal windows remain. */
+  _hideDockIfNoWindows() {
+    if (!isMac) return;
+    const hasVisible = [this.settingsWindow, this.onboardingWindow].some(
+      w => w && !w.isDestroyed(),
+    );
+    if (!hasVisible) {
+      app.dock.hide();
+    }
   }
 
   hideOnboarding() {
