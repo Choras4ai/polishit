@@ -200,8 +200,8 @@ class WindowManager {
   }
 
   _computeResultBounds(anchorBounds, options = {}) {
-    const width = 380;
-    const height = Math.max(220, Math.min(620, Math.round(options.preferredHeight || 320)));
+    const width = Math.max(480, Math.min(680, Math.round(options.preferredWidth || 520)));
+    const height = Math.max(260, Math.min(800, Math.round(options.preferredHeight || 420)));
     const point = this._anchorToPoint(anchorBounds);
     const display = screen.getDisplayNearestPoint(point);
     const area = display.workArea;

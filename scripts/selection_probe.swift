@@ -185,7 +185,7 @@ func childElements(of element: AXUIElement, attribute: CFString) -> [AXUIElement
   return (value as? [AXUIElement]) ?? []
 }
 
-func descendantCandidates(from root: AXUIElement, maxDepth: Int = 5, maxNodes: Int = 160) -> [AXUIElement] {
+func descendantCandidates(from root: AXUIElement, maxDepth: Int = 8, maxNodes: Int = 400) -> [AXUIElement] {
   var results: [AXUIElement] = []
   var queue: [(AXUIElement, Int)] = [(root, 0)]
   var index = 0
@@ -199,19 +199,29 @@ func descendantCandidates(from root: AXUIElement, maxDepth: Int = 5, maxNodes: I
       continue
     }
 
-    let selectedChildren = childElements(of: element, attribute: kAXSelectedChildrenAttribute as CFString)
-    let children = childElements(of: element, attribute: kAXChildrenAttribute as CFString)
+    // Search multiple child attributes for broader compatibility (Qt/WPS/etc.)
+    let childAttrs: [CFString] = [
+      kAXSelectedChildrenAttribute as CFString,
+      kAXChildrenAttribute as CFString,
+      kAXContentsAttribute as CFString,
+    ]
 
-    for child in selectedChildren + children {
-      let hash = CFHash(child)
-      if seen.contains(hash) {
-        continue
+    for attr in childAttrs {
+      let children = childElements(of: element, attribute: attr)
+      for child in children {
+        let hash = CFHash(child)
+        if seen.contains(hash) {
+          continue
+        }
+
+        seen.insert(hash)
+        results.append(child)
+        queue.append((child, depth + 1))
+
+        if results.count >= maxNodes {
+          break
+        }
       }
-
-      seen.insert(hash)
-      results.append(child)
-      queue.append((child, depth + 1))
-
       if results.count >= maxNodes {
         break
       }
@@ -281,7 +291,7 @@ func candidateElements(focusedElement: AXUIElement, appElement: AXUIElement) -> 
 
   var currentParent = parentElement(of: focusedElement)
   var depth = 0
-  while depth < 6 {
+  while depth < 10 {
     appendIfNeeded(currentParent)
     currentParent = currentParent.flatMap(parentElement)
     depth += 1
@@ -293,6 +303,15 @@ func candidateElements(focusedElement: AXUIElement, appElement: AXUIElement) -> 
 
   if let focusedWindow {
     for candidate in descendantCandidates(from: focusedWindow) {
+      appendIfNeeded(candidate)
+    }
+  }
+
+  // Search all windows (WPS/Qt apps may use non-focused window hierarchies)
+  let allWindows = childElements(of: appElement, attribute: kAXWindowsAttribute as CFString)
+  for window in allWindows {
+    appendIfNeeded(window)
+    for candidate in descendantCandidates(from: window, maxDepth: 6, maxNodes: 200) {
       appendIfNeeded(candidate)
     }
   }

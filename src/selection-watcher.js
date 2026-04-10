@@ -120,7 +120,8 @@ class SelectionWatcher {
     this._lastClipboardText = rawText;
     const text = this._normalizeText(rawText);
 
-    if (this._isTriggerableText(text)) {
+    // Clipboard triggers require more text to avoid false positives
+    if (text && text.length >= 6 && /[\u4e00-\u9fff]/.test(text)) {
       this._emitSelection(text, 'clipboard', null);
     } else {
       this._maybeClear('clipboard');
@@ -220,7 +221,10 @@ class SelectionWatcher {
   }
 
   _isTriggerableText(text) {
-    return Boolean(text && text.length >= 2);
+    if (!text || text.length < 4) return false;
+    // Must contain at least one CJK character or be a substantial selection
+    if (text.length < 10 && !/[\u4e00-\u9fff\u3400-\u4dbf]/.test(text)) return false;
+    return true;
   }
 
   _normalizeBounds(bounds) {

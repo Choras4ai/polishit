@@ -194,11 +194,11 @@ function scheduleToolbarShow(snapshot) {
 function estimateResultWindowMetrics(text, anchorBounds) {
   const normalized = (text || '').trim();
   const lineCount = normalized ? normalized.split(/\r?\n/).length : 1;
-  const density = Math.max(lineCount, Math.ceil(normalized.length / 48));
-  const preferredWidth = 380;
+  const density = Math.max(lineCount, Math.ceil(normalized.length / 60));
+  const preferredWidth = Math.max(520, Math.min(680, 480 + Math.ceil(normalized.length / 200) * 20));
   const preferredHeight = Math.max(
-    240,
-    Math.min(620, 180 + density * 18),
+    300,
+    Math.min(800, 220 + density * 22),
   );
 
   return { preferredWidth, preferredHeight };
