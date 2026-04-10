@@ -1,25 +1,26 @@
 'use strict';
 
 const { screen } = require('electron');
-const { spawn } = require('child_process');
+const { execFile } = require('child_process');
 
 const isMac = process.platform === 'darwin';
 
-const CHECK_SCRIPT = `
-tell application "System Events"
-  try
-    set frontProcess to first process whose frontmost is true
-    set bundleId to bundle identifier of frontProcess
-    if bundleId is "com.runshi.app" then return "__SELF__"
-    set focusedElement to focused UI element of frontProcess
-    set selText to value of attribute "AXSelectedText" of focusedElement
-    if selText is missing value then return ""
-    return selText
-  on error
-    return ""
-  end try
-end tell
-`;
+// Each line as a separate -e argument to avoid stdin encoding issues
+const CHECK_ARGS = [
+  '-e', 'tell application "System Events"',
+  '-e', '  try',
+  '-e', '    set fp to first process whose frontmost is true',
+  '-e', '    set bid to bundle identifier of fp',
+  '-e', '    if bid is "com.runshi.app" then return "__SELF__"',
+  '-e', '    set fe to focused UI element of fp',
+  '-e', '    set st to value of attribute "AXSelectedText" of fe',
+  '-e', '    if st is missing value then return ""',
+  '-e', '    return st',
+  '-e', '  on error',
+  '-e', '    return ""',
+  '-e', '  end try',
+  '-e', 'end tell',
+];
 
 /**
  * SelectionWatcher – monitors text selection in other apps via macOS Accessibility API.
@@ -67,26 +68,15 @@ class SelectionWatcher {
     if (!this._enabled || this._paused || this._pending) return;
     this._pending = true;
 
-    // Spawn osascript and feed script via stdin to avoid shell quoting issues
-    const proc = spawn('osascript', ['-']);
-    let stdout = '';
-    let killed = false;
-
-    const timer = setTimeout(() => {
-      killed = true;
-      proc.kill();
-    }, 2000);
-
-    proc.stdout.on('data', (d) => { stdout += d.toString(); });
-    proc.on('close', () => {
-      clearTimeout(timer);
+    execFile('osascript', CHECK_ARGS, { timeout: 2000 }, (err, stdout) => {
       this._pending = false;
-      if (killed) {
+
+      if (err) {
         this._maybeClear();
         return;
       }
 
-      const text = stdout.trim();
+      const text = (stdout || '').trim();
       if (text === '__SELF__') return;
 
       if (text && text.length >= 2) {
@@ -106,9 +96,6 @@ class SelectionWatcher {
         this._maybeClear();
       }
     });
-
-    proc.stdin.write(CHECK_SCRIPT);
-    proc.stdin.end();
   }
 
   _maybeClear() {
