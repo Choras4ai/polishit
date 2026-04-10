@@ -246,6 +246,13 @@ function registerIPC() {
   ipcMain.handle('action:copy', (_e, text) => clipboard.writeText(text));
 
   ipcMain.handle('window:open-settings', () => windowManager.showSettings());
+
+  ipcMain.handle('shell:open-external', (_e, url) => {
+    // Only allow https URLs to prevent arbitrary command execution
+    if (typeof url === 'string' && /^https?:\/\//i.test(url)) {
+      shell.openExternal(url);
+    }
+  });
   ipcMain.handle('window:close-result', () => windowManager.hideResult());
 
   ipcMain.handle('shortcut:get', () => config.get('shortcut'));

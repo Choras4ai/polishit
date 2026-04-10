@@ -50,6 +50,9 @@ contextBridge.exposeInMainWorld('polishAPI', {
   completeOnboarding: (presetId) => ipcRenderer.invoke('onboarding:complete', presetId),
   openOnboarding: () => ipcRenderer.invoke('window:open-onboarding'),
 
+  // Shell
+  openExternal: (url) => ipcRenderer.invoke('shell:open-external', url),
+
   // Toolbar
   toolbarAction: (task) => ipcRenderer.invoke('toolbar:action', task),
   getToolbarStatus: () => ipcRenderer.invoke('toolbar:get-status'),

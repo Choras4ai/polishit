@@ -311,7 +311,7 @@ $('#btnSaveShortcut').addEventListener('click', async () => {
 });
 
 $('#floatingToolbarEnabled').addEventListener('change', async (e) => {
-  const status = $('#advancedStatus');
+  const status = $('#generalStatus');
   const next = e.target.checked;
   const result = await window.polishAPI.setToolbarEnabled(next);
   renderToolbarStatus(result);
@@ -319,35 +319,48 @@ $('#floatingToolbarEnabled').addEventListener('change', async (e) => {
 });
 
 $('#btnRefreshToolbarStatus').addEventListener('click', async () => {
-  const status = $('#advancedStatus');
+  const status = $('#generalStatus');
   await refreshToolbarStatus();
   showStatus(status, '浮窗状态已刷新', 'success');
 });
 
 $('#btnOpenAccessibility').addEventListener('click', async () => {
-  const status = $('#advancedStatus');
+  const status = $('#generalStatus');
   showStatus(status, '正在打开系统设置...', '');
   const result = await window.polishAPI.openAccessibilitySettings();
   renderToolbarStatus(result);
 });
 
-// ── Save advanced ──
-$('#btnSaveAdvanced').addEventListener('click', async () => {
-  const status = $('#advancedStatus');
+// ── Save general ──
+$('#btnSaveGeneral').addEventListener('click', async () => {
+  const status = $('#generalStatus');
   const task = $('input[name="taskMode"]:checked').value;
   const mode = $('input[name="pipelineMode"]:checked').value;
   const temp = parseInt($('#temperature').value, 10) / 10;
-  const customPromptPolish = $('#customPromptPolish').value.trim();
-  const customPromptDedup = $('#customPromptDedup').value.trim();
-  const customPromptDeai = $('#customPromptDeai').value.trim();
 
   await window.polishAPI.setConfig('pipeline.task', task);
   await window.polishAPI.setConfig('pipeline.mode', mode);
   await window.polishAPI.setConfig('pipeline.temperature', temp);
+  showStatus(status, '已保存', 'success');
+});
+
+// ── Save prompts ──
+$('#btnSavePrompts').addEventListener('click', async () => {
+  const status = $('#promptsStatus');
+  const customPromptPolish = $('#customPromptPolish').value.trim();
+  const customPromptDedup = $('#customPromptDedup').value.trim();
+  const customPromptDeai = $('#customPromptDeai').value.trim();
+
   await window.polishAPI.setConfig('pipeline.customPrompts.polish', customPromptPolish);
   await window.polishAPI.setConfig('pipeline.customPrompts.dedup', customPromptDedup);
   await window.polishAPI.setConfig('pipeline.customPrompts.deai', customPromptDeai);
   showStatus(status, '已保存', 'success');
+});
+
+// ── Author link ──
+$('#authorLink').addEventListener('click', (e) => {
+  e.preventDefault();
+  window.polishAPI.openExternal('https://choraschan.github.io');
 });
 
 // ── Init ──

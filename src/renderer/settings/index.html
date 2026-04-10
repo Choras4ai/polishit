@@ -16,7 +16,8 @@
   <nav class="tabs">
     <button class="tab active" data-tab="api">API 配置</button>
     <button class="tab" data-tab="shortcut">快捷键</button>
-    <button class="tab" data-tab="advanced">高级</button>
+    <button class="tab" data-tab="general">通用</button>
+    <button class="tab" data-tab="prompts">提示词</button>
     <button class="tab" data-tab="about">关于</button>
   </nav>
 
@@ -89,8 +90,8 @@
     </div>
   </section>
 
-  <!-- Advanced Tab -->
-  <section class="tab-panel" id="panel-advanced">
+  <!-- General Tab -->
+  <section class="tab-panel" id="panel-general">
     <div class="form-group">
       <label class="form-label">浮窗工具栏</label>
       <div class="toggle-row">
@@ -155,27 +156,33 @@
       </div>
       <p class="form-hint">值越低越保守，越高越有创造性。推荐 0.2-0.4。</p>
     </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" id="btnSaveGeneral">保存</button>
+      <span class="status-text" id="generalStatus"></span>
+    </div>
+  </section>
+
+  <!-- Prompts Tab -->
+  <section class="tab-panel" id="panel-prompts">
+    <p class="panel-intro">为每种模式添加额外提示词，会合并到对应模式的系统提示词中，作为额外偏好。留空则使用默认提示词。</p>
     <div class="form-group">
-      <label class="form-label" for="customPromptPolish">润色额外提示词</label>
+      <label class="form-label" for="customPromptPolish">✦ 润色额外提示词</label>
       <textarea class="form-textarea" id="customPromptPolish" rows="4"
                 placeholder="例如：保留我的个人表达习惯；尽量减少书面腔；遇到引号内容不要改。"></textarea>
-      <p class="form-hint">会合并到润色模式的系统提示词中，作为额外偏好。</p>
     </div>
     <div class="form-group">
-      <label class="form-label" for="customPromptDedup">降重额外提示词</label>
+      <label class="form-label" for="customPromptDedup">⇅ 降重额外提示词</label>
       <textarea class="form-textarea" id="customPromptDedup" rows="4"
                 placeholder="例如：优先打散句式，不要把句子改得太口语；保留学术术语。"></textarea>
-      <p class="form-hint">会合并到降重模式的系统提示词中，作为额外偏好。</p>
     </div>
     <div class="form-group">
-      <label class="form-label" for="customPromptDeai">降AI率（图一乐版）额外提示词</label>
+      <label class="form-label" for="customPromptDeai">👤 降AI率（图一乐版）额外提示词</label>
       <textarea class="form-textarea" id="customPromptDeai" rows="4"
                 placeholder="例如：更像本科生自然写作；避免过度模板化过渡词；保留专业性。"></textarea>
-      <p class="form-hint">会合并到降AI率（图一乐版）模式的系统提示词中，作为额外偏好。</p>
     </div>
     <div class="form-actions">
-      <button class="btn btn-primary" id="btnSaveAdvanced">保存</button>
-      <span class="status-text" id="advancedStatus"></span>
+      <button class="btn btn-primary" id="btnSavePrompts">保存</button>
+      <span class="status-text" id="promptsStatus"></span>
     </div>
   </section>
 
@@ -251,6 +258,18 @@
         <div class="feature-item">⚡ 极速响应：全局快捷键即时触发</div>
         <div class="feature-item">🤖 多智能体：语法 + 风格分步润色</div>
         <div class="feature-item">📝 逐条审阅：每处修改可独立接受或拒绝</div>
+      </div>
+
+      <div class="about-author">
+        <div class="about-author-label">开发者</div>
+        <a class="about-author-link" id="authorLink" href="#">
+          <span class="about-author-avatar">C</span>
+          <div class="about-author-info">
+            <span class="about-author-name">Choras Chan</span>
+            <span class="about-author-url">choraschan.github.io</span>
+          </div>
+          <span class="about-author-arrow">→</span>
+        </a>
       </div>
     </div>
   </section>
