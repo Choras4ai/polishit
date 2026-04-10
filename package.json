@@ -1,6 +1,6 @@
 {
   "name": "runshi",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "润石 PoliShit - 润色构石，构石虽糙，一润成文",
   "main": "main.js",
   "scripts": {
