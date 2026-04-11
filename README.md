@@ -17,6 +17,12 @@
 - **macOS**: `润石 PoliShit-x.x.x-arm64.dmg`
 - **Windows**: `润石 PoliShit Setup x.x.x.exe`
 
+> **macOS 提示"已损坏，无法打开"？** 这是因为应用未经 Apple 签名。安装后在终端执行：
+> ```bash
+> xattr -cr /Applications/润石\ PoliShit.app
+> ```
+> 然后重新打开即可。
+
 ## 开发环境
 
 - Node.js 18+
