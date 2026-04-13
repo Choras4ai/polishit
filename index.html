@@ -3,579 +3,293 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>润石 PoliShit - 中文学术写作助手</title>
-  <meta name="description" content="润石 PoliShit 是一款中文写作辅助工具，提供智能润色、降重、降AI率（图一乐版）三大功能。选中即改，原子级修订，无需复制粘贴。">
-  <link rel="icon" type="image/png" href="icon.png">
-  <style>
-    :root {
-      --primary: #4A7C6B;
-      --primary-light: #5f9a85;
-      --primary-dark: #3a6255;
-      --bg: #fafbfc;
-      --fg: #1a1a2e;
-      --fg2: #555;
-      --fg3: #999;
-      --card-bg: #fff;
-      --border: #e5e7eb;
-      --radius: 16px;
-      --red: #dc3545;
-      --green: #28a745;
-      --blue: #4285f4;
-      --purple: #9334e6;
-      --teal: #00897b;
-      --orange: #e67700;
-    }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
-      background: var(--bg);
-      color: var(--fg);
-      line-height: 1.7;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    /* ── Navigation ── */
-    nav {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-      background: rgba(250,251,252,0.85);
-      backdrop-filter: blur(20px);
-      border-bottom: 1px solid var(--border);
-      padding: 0 24px;
-    }
-    .nav-inner {
-      max-width: 1100px; margin: 0 auto;
-      display: flex; align-items: center; justify-content: space-between; height: 60px;
-    }
-    .nav-logo {
-      font-size: 20px; font-weight: 700; color: var(--primary);
-      text-decoration: none; display: flex; align-items: center; gap: 8px;
-    }
-    .nav-links { display: flex; gap: 28px; }
-    .nav-links a {
-      color: var(--fg2); text-decoration: none; font-size: 14px; font-weight: 500;
-      transition: color 0.2s;
-    }
-    .nav-links a:hover { color: var(--primary); }
-
-    /* ── Hero ── */
-    .hero {
-      padding: 140px 24px 80px;
-      text-align: center;
-      background: linear-gradient(180deg, #e8f5ee 0%, var(--bg) 100%);
-    }
-    .hero-badge {
-      display: inline-block; background: rgba(74,124,107,0.1);
-      color: var(--primary); font-size: 13px; font-weight: 600;
-      padding: 6px 16px; border-radius: 20px; margin-bottom: 20px;
-    }
-    .hero h1 {
-      font-size: 52px; font-weight: 800; letter-spacing: -1px;
-      margin-bottom: 16px; line-height: 1.2;
-    }
-    .hero h1 span { color: var(--primary); }
-    .hero-slogan {
-      font-size: 64px; font-weight: 700; color: var(--primary);
-      margin-bottom: 12px; letter-spacing: 2px;
-    }
-    .hero p {
-      font-size: 18px; color: var(--fg2); max-width: 600px; margin: 0 auto 36px;
-    }
-    .hero-actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
-    .btn {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 14px 32px; border-radius: 12px; font-size: 15px;
-      font-weight: 600; text-decoration: none; transition: all 0.2s;
-      border: none; cursor: pointer;
-    }
-    .btn-primary {
-      background: var(--primary); color: #fff;
-      box-shadow: 0 4px 14px rgba(74,124,107,0.35);
-    }
-    .btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); }
-    .btn-secondary { background: var(--card-bg); color: var(--fg); border: 1px solid var(--border); }
-    .btn-secondary:hover { border-color: var(--primary); color: var(--primary); }
-
-    /* ── Section common ── */
-    .section { padding: 80px 24px; max-width: 1100px; margin: 0 auto; }
-    .section-title { text-align: center; font-size: 36px; font-weight: 700; margin-bottom: 12px; }
-    .section-subtitle { text-align: center; font-size: 16px; color: var(--fg2); margin-bottom: 56px; max-width: 600px; margin-left: auto; margin-right: auto; }
-
-    /* ══════════════════════════════════════════
-       COMPARISON ANIMATION: Old Way vs 润石 PoliShit
-       ══════════════════════════════════════════ */
-    .compare-section { padding: 80px 24px; max-width: 1100px; margin: 0 auto; }
-    .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: start; }
-    .compare-card {
-      background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius);
-      padding: 32px; min-height: 420px; position: relative; overflow: hidden;
-    }
-    .compare-card.old { opacity: 0.7; }
-    .compare-card.new { border-color: var(--primary); box-shadow: 0 8px 30px rgba(74,124,107,0.12); }
-    .compare-label {
-      font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
-      margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
-    }
-    .compare-label.bad { color: var(--red); }
-    .compare-label.good { color: var(--primary); }
-    .compare-label .badge {
-      font-size: 10px; padding: 2px 8px; border-radius: 8px;
-      background: rgba(74,124,107,0.1); color: var(--primary); font-weight: 600;
-    }
-
-    /* ── Animated mock UI: Old Way ── */
-    .mock-editor {
-      background: #f8f9fa; border-radius: 10px; padding: 16px; font-size: 13px;
-      line-height: 1.8; color: var(--fg); margin-bottom: 12px; min-height: 60px;
-      border: 1px solid #e2e5e9; position: relative;
-    }
-    .mock-editor .cursor {
-      display: inline-block; width: 2px; height: 16px; background: var(--blue);
-      animation: blink 1s infinite; vertical-align: text-bottom; margin-left: 1px;
-    }
-    @keyframes blink { 0%,50%{opacity:1} 51%,100%{opacity:0} }
-
-    .mock-chatbox {
-      background: #1a1a2e; border-radius: 10px; padding: 14px; font-size: 12px;
-      color: #e0e0e0; margin-bottom: 12px; font-family: monospace;
-    }
-    .mock-chatbox .prompt { color: #7ec8e3; }
-    .mock-chatbox .response { color: #a5d6a7; margin-top: 8px; }
-
-    .old-step {
-      display: flex; align-items: center; gap: 8px; padding: 8px 0;
-      font-size: 13px; color: var(--fg2); opacity: 0;
-      animation: fadeSlideIn 0.4s forwards;
-    }
-    .old-step .num {
-      width: 22px; height: 22px; border-radius: 50%; font-size: 11px;
-      display: flex; align-items: center; justify-content: center;
-      background: #fee; color: var(--red); font-weight: 700; flex-shrink: 0;
-    }
-    .old-step:nth-child(1) { animation-delay: 0.5s; }
-    .old-step:nth-child(2) { animation-delay: 1.5s; }
-    .old-step:nth-child(3) { animation-delay: 2.5s; }
-    .old-step:nth-child(4) { animation-delay: 3.5s; }
-    .old-step:nth-child(5) { animation-delay: 4.5s; }
-    .old-step .time { color: var(--red); font-weight: 600; margin-left: auto; font-size: 12px; }
-
-    /* ── Animated mock UI: RunShi Way ── */
-    .mock-text-area {
-      background: #f8f9fa; border-radius: 10px; padding: 16px; font-size: 14px;
-      line-height: 2; color: var(--fg); margin-bottom: 12px;
-      border: 1px solid #e2e5e9; position: relative;
-    }
-    .mock-text-area .selected {
-      background: rgba(74,124,107,0.15); border-radius: 3px; padding: 1px 0;
-    }
-    /* Animated inline annotation */
-    .mock-text-area .anno {
-      position: relative; cursor: pointer;
-    }
-    .mock-text-area .anno-underline {
-      border-bottom: 2px wavy var(--blue); padding-bottom: 1px;
-    }
-    .mock-text-area .anno-grammar {
-      border-bottom: 2px solid var(--red); padding-bottom: 1px;
-    }
-    .mock-text-area .anno-dedup {
-      border-bottom: 2px solid var(--purple); padding-bottom: 1px;
-      background: rgba(147,52,230,0.06);
-    }
-
-    .mock-toolbar {
-      display: inline-flex; gap: 0; background: #1a1a1a; border-radius: 10px;
-      padding: 6px 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-      opacity: 0; transform: translateY(6px) scale(0.95);
-      animation: toolbarPop 0.35s 0.8s forwards;
-    }
-    .mock-toolbar .tb { 
-      color: #fff; font-size: 12px; padding: 5px 12px; border-radius: 7px;
-      font-weight: 500;
-    }
-    .mock-toolbar .tb.active { background: var(--primary); }
-
-    @keyframes toolbarPop {
-      to { opacity: 1; transform: translateY(0) scale(1); }
-    }
-
-    .mock-popup {
-      background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px;
-      padding: 12px 14px; box-shadow: 0 6px 24px rgba(0,0,0,0.1);
-      font-size: 12px; margin-top: 8px; width: 260px;
-      opacity: 0; transform: translateY(8px);
-      animation: popupIn 0.3s 2s forwards;
-    }
-    @keyframes popupIn { to { opacity: 1; transform: translateY(0); } }
-    .mock-popup .type-badge {
-      display: inline-block; font-size: 10px; font-weight: 600;
-      padding: 2px 8px; border-radius: 8px; margin-bottom: 6px;
-    }
-    .mock-popup .type-badge.wording { background: #e8f0fe; color: var(--blue); }
-    .mock-popup .suggestion { 
-      background: rgba(74,124,107,0.06); border-radius: 6px; padding: 6px 8px;
-      margin-bottom: 6px; font-size: 12px; line-height: 1.6;
-    }
-    .mock-popup .suggestion del { color: var(--red); text-decoration: line-through; }
-    .mock-popup .suggestion ins { color: var(--primary); text-decoration: none; font-weight: 600; }
-    .mock-popup .reason { color: var(--fg2); font-size: 11px; margin-bottom: 8px; }
-    .mock-popup .actions { display: flex; gap: 6px; }
-    .mock-popup .actions button {
-      border: none; border-radius: 6px; padding: 5px 14px; font-size: 11px;
-      font-weight: 600; cursor: pointer;
-    }
-    .mock-popup .actions .accept { background: var(--primary); color: #fff; }
-    .mock-popup .actions .dismiss { background: #f0f0f0; color: var(--fg2); }
-
-    .new-step {
-      display: flex; align-items: center; gap: 8px; padding: 6px 0;
-      font-size: 13px; color: var(--fg2); opacity: 0;
-      animation: fadeSlideIn 0.4s forwards;
-    }
-    .new-step .num {
-      width: 22px; height: 22px; border-radius: 50%; font-size: 11px;
-      display: flex; align-items: center; justify-content: center;
-      background: #e8f5ee; color: var(--primary); font-weight: 700; flex-shrink: 0;
-    }
-    .new-step:nth-child(1) { animation-delay: 0.3s; }
-    .new-step:nth-child(2) { animation-delay: 0.8s; }
-    .new-step:nth-child(3) { animation-delay: 1.3s; }
-    .new-step .time { color: var(--primary); font-weight: 600; margin-left: auto; font-size: 12px; }
-
-    @keyframes fadeSlideIn {
-      from { opacity: 0; transform: translateX(-8px); }
-      to { opacity: 1; transform: translateX(0); }
-    }
-
-    .compare-summary {
-      margin-top: 16px; padding: 12px; border-radius: 10px; font-size: 13px;
-      font-weight: 600; text-align: center; opacity: 0;
-      animation: fadeSlideIn 0.5s 5.5s forwards;
-    }
-    .compare-summary.bad { background: #fef0f0; color: var(--red); }
-    .compare-summary.good { background: #e8f5ee; color: var(--primary); }
-
-    /* ══════════════════════════════════
-       CORE ADVANTAGES
-       ══════════════════════════════════ */
-    .advantages-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
-    .adv-card {
-      background: var(--card-bg); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 28px; transition: all 0.3s;
-    }
-    .adv-card:hover {
-      border-color: var(--primary); transform: translateY(-4px);
-      box-shadow: 0 8px 30px rgba(74,124,107,0.12);
-    }
-    .adv-icon { font-size: 28px; margin-bottom: 12px; }
-    .adv-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
-    .adv-card p { font-size: 13px; color: var(--fg2); line-height: 1.7; }
-
-    /* ── Features ── */
-    .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
-    .feature-card {
-      background: var(--card-bg); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 32px; transition: all 0.3s;
-    }
-    .feature-card:hover {
-      border-color: var(--primary); box-shadow: 0 8px 30px rgba(74,124,107,0.12);
-      transform: translateY(-4px);
-    }
-    .feature-icon {
-      width: 48px; height: 48px; border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 24px; margin-bottom: 16px;
-    }
-    .feature-icon.polish { background: rgba(74,124,107,0.12); }
-    .feature-icon.dedup { background: rgba(147,52,230,0.1); }
-    .feature-icon.deai { background: rgba(0,137,123,0.1); }
-    .feature-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
-    .feature-card p { font-size: 14px; color: var(--fg2); line-height: 1.7; }
-    .feature-tag {
-      display: inline-block; font-size: 11px; font-weight: 600;
-      padding: 3px 10px; border-radius: 10px; margin-top: 12px;
-    }
-    .feature-tag.cnki { background: #e8f5ee; color: var(--primary); }
-    .feature-tag.new { background: #fff3e0; color: #e65100; }
-
-    /* ── Steps ── */
-    .steps { display: flex; gap: 32px; justify-content: center; flex-wrap: wrap; }
-    .step { flex: 1; min-width: 200px; max-width: 260px; text-align: center; }
-    .step-num {
-      width: 40px; height: 40px; border-radius: 50%;
-      background: var(--primary); color: #fff; font-size: 18px; font-weight: 700;
-      display: flex; align-items: center; justify-content: center;
-      margin: 0 auto 12px;
-    }
-    .step h4 { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
-    .step p { font-size: 13px; color: var(--fg2); }
-
-    /* ── Providers ── */
-    .providers { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 20px; }
-    .provider-badge {
-      background: var(--card-bg); border: 1px solid var(--border);
-      padding: 8px 18px; border-radius: 10px; font-size: 13px; font-weight: 500;
-    }
-    .provider-badge.free {
-      border-color: var(--primary); background: rgba(74,124,107,0.04);
-    }
-    .provider-note {
-      text-align: center; margin-top: 16px; font-size: 13px; color: var(--fg3);
-    }
-
-    /* ── Download ── */
-    .download-section {
-      text-align: center; padding: 80px 24px;
-      background: linear-gradient(180deg, var(--bg) 0%, #e8f5ee 100%);
-    }
-    .download-card {
-      max-width: 480px; margin: 0 auto; background: var(--card-bg);
-      border: 1px solid var(--border); border-radius: var(--radius);
-      padding: 40px; box-shadow: 0 8px 30px rgba(0,0,0,0.06);
-    }
-    .download-card h3 { font-size: 24px; font-weight: 700; margin-bottom: 6px; }
-    .download-card .version { color: var(--fg2); font-size: 14px; margin-bottom: 24px; }
-    .download-card .sys-req { font-size: 12px; color: var(--fg2); margin-top: 16px; }
-
-    /* ── Footer ── */
-    footer {
-      text-align: center; padding: 32px 24px; font-size: 13px; color: var(--fg2);
-      border-top: 1px solid var(--border);
-    }
-    footer a { color: var(--primary); text-decoration: none; }
-
-    /* ── Responsive ── */
-    @media (max-width: 768px) {
-      .hero h1 { font-size: 32px; }
-      .features-grid, .advantages-grid { grid-template-columns: 1fr; }
-      .compare-grid { grid-template-columns: 1fr; }
-      .steps { flex-direction: column; align-items: center; }
-      .nav-links { display: none; }
-    }
-  </style>
+  <title>润石 PoliShit - 选中文字，直接改</title>
+  <meta
+    name="description"
+    content="润石 PoliShit 是一款中文写作辅助工具，只保留润色与降AIGC两种模式。选中文字，直接修改，逐条审阅。"
+  >
+  <link rel="icon" type="image/png" href="media/icon-256.png">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-
-<nav>
-  <div class="nav-inner">
-    <a class="nav-logo" href="#">
-      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-        <rect width="28" height="28" rx="6" fill="#4A7C6B"/>
-        <text x="14" y="20" text-anchor="middle" font-size="16" font-weight="bold" fill="white" font-family="PingFang SC, sans-serif">润</text>
-      </svg>
-      润石 PoliShit
-    </a>
-    <div class="nav-links">
-      <a href="#compare">为什么选润石 PoliShit</a>
-      <a href="#features">功能</a>
-      <a href="#download">下载</a>
-      <a href="https://github.com/nicecho/runshi" target="_blank">GitHub</a>
+  <header class="site-header">
+    <div class="site-header-inner">
+      <a class="brand" href="#top" aria-label="润石 PoliShit 首页">
+        <img class="brand-icon" src="media/icon-256.png" alt="润石 PoliShit 图标">
+        <span class="brand-text">润石 PoliShit</span>
+      </a>
+      <nav class="site-nav" aria-label="站点导航">
+        <a href="#experience">效果</a>
+        <a href="#modes">模式</a>
+        <a href="#download">下载</a>
+        <a href="https://github.com/Choras4ai/polishit" target="_blank" rel="noreferrer">GitHub</a>
+      </nav>
+      <a
+        class="header-link"
+        href="https://www.xiaohongshu.com/user/profile/5baad820f7e8b908db85cf62"
+        target="_blank"
+        rel="noreferrer"
+      >小红书</a>
     </div>
-  </div>
-</nav>
+  </header>
 
-<!-- ═══════════ HERO ═══════════ -->
-<section class="hero">
-  <div class="hero-badge">面向中文论文写作 · 跨平台 · 开箱即用</div>
-  <h1>润石 PoliShit</h1>
-  <p class="hero-slogan">润色构石，构石虽糙，一润成文。</p>
-  <p>不用复制粘贴到 AI 对话框，不用担心一整段被改得面目全非。<br>选中文字，原地修改，逐词逐句精修，每一处改动都清清楚楚。</p>
-  <div class="hero-actions">
-    <a class="btn btn-primary" href="#download">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 12l-4-4h2.5V2h3v6H12L8 12zm-6 2h12v1.5H2V14z"/></svg>
-      免费下载
-    </a>
-    <a class="btn btn-secondary" href="https://github.com/nicecho/runshi" target="_blank">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
-      查看源码
-    </a>
-  </div>
-</section>
-
-<!-- ═══════════ COMPARISON ANIMATION ═══════════ -->
-<section class="compare-section" id="compare">
-  <h2 class="section-title">传统方式 vs 润石 PoliShit</h2>
-  <p class="section-subtitle">复制粘贴到 AI 对话框的时代该结束了</p>
-
-  <div class="compare-grid">
-    <!-- OLD WAY -->
-    <div class="compare-card old">
-      <div class="compare-label bad">✕ 传统 AI 对话框方式</div>
-      <div class="old-step"><span class="num">1</span> 选中文本，Ctrl+C 复制 <span class="time">3s</span></div>
-      <div class="old-step"><span class="num">2</span> 切到 ChatGPT，粘贴 + 写指令 <span class="time">15s</span></div>
-      <div class="old-step"><span class="num">3</span> 等待 AI 生成完整回复... <span class="time">20s</span></div>
-      <div class="old-step"><span class="num">4</span> 复制 AI 输出，切回文档粘贴 <span class="time">5s</span></div>
-      <div class="old-step"><span class="num">5</span> 逐行对比原文，手动检查哪里改了... <span class="time">???</span></div>
-      <div class="mock-chatbox" style="opacity:0;animation:fadeSlideIn 0.4s 5s forwards">
-        <div class="prompt">> 请帮我润色这段文字：在当前经济形势下国内消费...</div>
-        <div class="response">AI: 在当下的经济形势中，国内消费市场正呈现出一种前所未有的复杂态势。从宏观层面来看...<br><span style="color:#ef5350">⚠ 整段被改写，原意丢失</span></div>
-      </div>
-      <div class="compare-summary bad" style="animation-delay:6s">
-        😩 至少 5 步 · 容易丢失原意 · 无法逐条审阅
-      </div>
-    </div>
-
-    <!-- RUNSHI WAY -->
-    <div class="compare-card new">
-      <div class="compare-label good">
-        ✓ 润石 PoliShit 方式
-        <span class="badge">原子级修订</span>
+  <main id="top">
+    <section class="hero">
+      <div class="hero-top reveal">
+        <p class="eyebrow">更直接的写作辅助</p>
+        <h1>传统方式 vs 润石 PoliShit</h1>
+        <p class="hero-subtitle">复制粘贴到 AI 对话框的时代该结束了。</p>
       </div>
 
-      <div class="mock-text-area">
-        在当前<span class="selected">经济形势下</span>国内消费市场呈现出<span class="anno"><span class="anno-underline">复什</span></span>的局面，各方面<span class="anno"><span class="anno-grammar">因数</span></span>相互交织。
-        <br>
-        <div style="margin-top:8px">
-          <div class="mock-toolbar">
-            <span class="tb active">✦ 润色</span>
-            <span class="tb">⇅ 降重</span>
-            <span class="tb">👤 降AI率（图一乐版）</span>
+      <div class="hero-compare-grid">
+        <article class="hero-compare-card hero-compare-old reveal">
+          <div class="hero-compare-head hero-compare-head-old">
+            <span>✕ 传统 AI 对话框方式</span>
+          </div>
+          <div class="legacy-step-list">
+            <div class="legacy-step"><span class="legacy-step-index">1</span><span class="legacy-step-text">选中文本，复制</span><span class="legacy-step-time">3s</span></div>
+            <div class="legacy-step"><span class="legacy-step-index">2</span><span class="legacy-step-text">切到 ChatGPT，粘贴并写提示词</span><span class="legacy-step-time">15s</span></div>
+            <div class="legacy-step"><span class="legacy-step-index">3</span><span class="legacy-step-text">等待完整回复生成</span><span class="legacy-step-time">20s</span></div>
+            <div class="legacy-step"><span class="legacy-step-index">4</span><span class="legacy-step-text">复制输出，再切回原文</span><span class="legacy-step-time">5s</span></div>
+            <div class="legacy-step"><span class="legacy-step-index">5</span><span class="legacy-step-text">逐行对比哪里改了</span><span class="legacy-step-time">???</span></div>
+          </div>
+          <div class="legacy-output">
+            <p class="legacy-output-prompt">&gt; 请帮我润色这段文字：在当前经济形势下国内消费...</p>
+            <p class="legacy-output-answer">AI：在当下的经济形势中，国内消费市场正呈现出一种前所未有的复杂态势...</p>
+            <p class="legacy-output-risk">整段被改写，原意丢失</p>
+          </div>
+          <div class="legacy-summary">至少 5 步，容易丢失原意，无法逐条审阅</div>
+        </article>
+
+        <article class="hero-compare-card hero-compare-new reveal">
+          <div class="hero-compare-head hero-compare-head-new">
+            <span>✓ 润石 PoliShit 方式</span>
+            <span class="hero-compare-badge">原子级修订</span>
+          </div>
+          <div class="modern-editor">
+            <p class="modern-editor-text">
+              在当前<span class="is-selected">经济形势下</span>国内消费市场呈现出<span class="mark-wording">复什</span>的局面，
+              各方面<span class="mark-logic">因数</span>相互交织。
+            </p>
+            <div class="floating-toolbar">
+              <button class="toolbar-pill toolbar-pill-active" type="button">✦ 润色</button>
+              <button class="toolbar-pill" type="button">👤 降AIGC</button>
+            </div>
+          </div>
+          <div class="modern-suggestion">
+            <div class="suggestion-tag">用词</div>
+            <div class="suggestion-line"><del>复什</del><span>→</span><ins>复杂</ins></div>
+            <p>错别字修正，直接定位到原文。</p>
+            <div class="modern-suggestion-actions">
+              <button class="btn btn-mini btn-primary" type="button">接受</button>
+              <button class="btn btn-mini btn-soft" type="button">忽略</button>
+            </div>
+          </div>
+          <div class="modern-step-list">
+            <div class="modern-step"><span class="modern-step-index">1</span><span class="modern-step-text">选中文字，浮窗自动出现</span><span class="modern-step-time">0s</span></div>
+            <div class="modern-step"><span class="modern-step-index">2</span><span class="modern-step-text">点击「润色」，AI 原地分析</span><span class="modern-step-time">3s</span></div>
+            <div class="modern-step"><span class="modern-step-index">3</span><span class="modern-step-text">逐条审阅，一键接受或忽略</span><span class="modern-step-time">✓</span></div>
+          </div>
+          <div class="modern-summary">选中即改，每处改动可见，原文语义不丢失</div>
+        </article>
+      </div>
+
+      <div class="hero-cta reveal">
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="#download">免费下载</a>
+          <a class="btn btn-secondary" href="https://github.com/Choras4ai/polishit" target="_blank" rel="noreferrer">查看源码</a>
+        </div>
+        <div class="hero-meta">
+          <span>macOS / Windows</span>
+          <span>选中即弹</span>
+          <span>逐条审阅</span>
+        </div>
+      </div>
+      <div class="hero-peek">往下看真实效果</div>
+    </section>
+
+    <section class="story" id="experience">
+      <div class="section-head reveal">
+        <p class="eyebrow">直接看到它怎么工作</p>
+        <h2>不是对话框，是原地处理。</h2>
+        <p>滚动到这里，官网就会直接演示选中、弹出、审阅和确认的完整过程。</p>
+      </div>
+
+      <div class="story-layout">
+        <div class="story-copy">
+          <article class="story-step is-active reveal" data-scene-target="select">
+            <span class="story-step-index">01</span>
+            <div>
+              <h3>选中一段文字</h3>
+              <p>不复制，不跳转，光标还留在原文环境里。</p>
+            </div>
+          </article>
+          <article class="story-step reveal" data-scene-target="toolbar">
+            <span class="story-step-index">02</span>
+            <div>
+              <h3>工具条贴着选区出现</h3>
+              <p>只给两个入口：润色，降AIGC。</p>
+            </div>
+          </article>
+          <article class="story-step reveal" data-scene-target="polish">
+            <span class="story-step-index">03</span>
+            <div>
+              <h3>先看具体改了哪里</h3>
+              <p>每处改动都有理由，可以逐条接受，也可以忽略。</p>
+            </div>
+          </article>
+          <article class="story-step reveal" data-scene-target="deai">
+            <span class="story-step-index">04</span>
+            <div>
+              <h3>切到降AIGC继续处理</h3>
+              <p>保留原意，重排表达，让文字更自然。</p>
+            </div>
+          </article>
+        </div>
+
+        <div class="story-stage">
+          <div class="product-stage reveal" id="productStage" data-scene="select">
+            <div class="product-window">
+              <div class="product-window-top">
+                <div class="product-window-brand">
+                  <img src="media/icon-256.png" alt="" aria-hidden="true">
+                  <span>润石 PoliShit</span>
+                </div>
+                <div class="product-window-actions">
+                  <button class="stage-mode stage-mode-active" type="button">润色</button>
+                  <button class="stage-mode" type="button">降AIGC</button>
+                </div>
+              </div>
+
+              <div class="product-editor">
+                <p>
+                  善浮窗、定位、动画功能，却受限于<span class="editor-selection">宿主编辑器的集成边界</span>，
+                  无法完全绕过。若要实现类似 Grammarly 的无缝体验，则需采取双线并行策略。
+                </p>
+                <div class="product-toolbar">
+                  <button class="toolbar-action toolbar-action-primary" type="button">✦ 润色</button>
+                  <button class="toolbar-action" type="button">👤 降AIGC</button>
+                </div>
+              </div>
+
+              <div class="product-suggestion-card">
+                <div class="suggestion-chip">风格</div>
+                <div class="suggestion-main">
+                  <div class="suggestion-before">善浮窗、定位、动画功能</div>
+                  <div class="suggestion-after">浮窗、定位与动效能力</div>
+                </div>
+                <p class="suggestion-reason">压缩重复表达，让句子更稳更顺。</p>
+                <div class="suggestion-actions">
+                  <button type="button" class="btn btn-mini btn-soft">忽略</button>
+                  <button type="button" class="btn btn-mini btn-primary">接受</button>
+                </div>
+              </div>
+
+              <div class="product-result-panel">
+                <div class="panel-label">完整修改稿</div>
+                <p>
+                  浮窗、定位与动效能力仍受宿主编辑器边界限制，无法彻底绕过。
+                  若想获得更接近 Grammarly 的体验，工程上应采用双线并行方案。
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="modes" id="modes">
+      <div class="section-head reveal">
+        <p class="eyebrow">模式</p>
+        <h2>只留下两个真正需要的动作。</h2>
+      </div>
+
+      <div class="mode-band reveal">
+        <div class="mode-copy">
+          <p class="mode-kicker">✦ 润色</p>
+          <h3>先把字句打磨干净。</h3>
+          <p>语法、标点、用词、节奏一起处理，但不把文本改成另一种声音。</p>
+        </div>
+        <div class="mode-preview">
+          <div class="preview-text">
+            “在这个基础上，我们还需要进一步进一步讨论。”
+          </div>
+          <div class="preview-output">
+            “在此基础上，我们还需要继续讨论。”
           </div>
         </div>
       </div>
 
-      <div class="mock-popup">
-        <span class="type-badge wording">用词</span>
-        <div class="suggestion"><del>复什</del> → <ins>复杂</ins></div>
-        <div class="reason">错别字修正："什"应为"杂"</div>
-        <div class="actions">
-          <button class="accept">✓ 接受</button>
-          <button class="dismiss">✕ 忽略</button>
+      <div class="mode-band mode-band-alt reveal">
+        <div class="mode-copy">
+          <p class="mode-kicker">👤 降AIGC</p>
+          <h3>把表达调得更自然。</h3>
+          <p>不做夸张改写，重点是把句子拉回更接近自然写作的状态。</p>
+        </div>
+        <div class="mode-preview">
+          <div class="preview-text">
+            “综上所述，本文从多个维度系统性地展开了深入而全面的分析。”
+          </div>
+          <div class="preview-output">
+            “综合来看，本文从多个维度做了较完整的分析。”
+          </div>
         </div>
       </div>
+    </section>
 
-      <div style="margin-top:12px">
-        <div class="new-step"><span class="num">1</span> 选中文字，浮窗自动出现 <span class="time">0s</span></div>
-        <div class="new-step"><span class="num">2</span> 点击「润色」，AI 原地分析 <span class="time">3s</span></div>
-        <div class="new-step"><span class="num">3</span> 逐条审阅，一键接受/忽略 <span class="time">✓</span></div>
+    <section class="stack-band">
+      <div class="section-head reveal">
+        <p class="eyebrow">模型与接入</p>
+        <h2>开箱即用，也能自配。</h2>
+        <p>默认可直接上手；对模型和成本有要求时，也可以切到自己的 API。</p>
       </div>
-      <div class="compare-summary good" style="animation-delay:2s">
-        🎯 选中即改 · 每处改动可见 · 原文语义不丢失
+      <div class="provider-row reveal">
+        <span class="provider-pill">Together AI</span>
+        <span class="provider-pill">SiliconFlow</span>
+        <span class="provider-pill">DeepSeek</span>
+        <span class="provider-pill">Gemini</span>
+        <span class="provider-pill">Claude</span>
+        <span class="provider-pill">OpenAI</span>
+        <span class="provider-pill">Ollama</span>
+        <span class="provider-pill">自定义 API</span>
       </div>
-    </div>
-  </div>
-</section>
+    </section>
 
-<!-- ═══════════ CORE ADVANTAGES ═══════════ -->
-<section class="section">
-  <h2 class="section-title">核心优势</h2>
-  <p class="section-subtitle">和 AI 对话框、在线润色网站相比，润石 PoliShit 有本质区别</p>
+    <section class="download" id="download">
+      <div class="section-head reveal">
+        <p class="eyebrow">下载</p>
+        <h2>拿到安装包，直接试。</h2>
+      </div>
 
-  <div class="advantages-grid">
-    <div class="adv-card">
-      <div class="adv-icon">🔬</div>
-      <h3>原子级修订，而非整段重写</h3>
-      <p>传统方式 AI 会返回一整段改写结果，你无法知道哪些词被改了、改得对不对。润石 PoliShit 精确标注每一处修改，附带理由和替代方案，你可以<strong>逐条接受或忽略</strong>。</p>
-    </div>
-    <div class="adv-card">
-      <div class="adv-icon">⚡</div>
-      <h3>选中即改，零切换成本</h3>
-      <p>在任何应用中选中文字，浮窗工具栏自动弹出。一键处理，结果悬浮呈现。不用切窗口、不用复制粘贴、不用写 prompt，<strong>所见即所改</strong>。</p>
-    </div>
-    <div class="adv-card">
-      <div class="adv-icon">🔌</div>
-      <h3>无限 API 额度，自由切换模型</h3>
-      <p>内置 2 个免费 API（Together AI + 硅基流动），还支持 DeepSeek、豆包、Gemini、Claude、OpenAI、Ollama 等。<strong>用自己的 Key，额度上限由你决定</strong>。</p>
-    </div>
-  </div>
-</section>
+      <div class="download-grid">
+        <article class="download-card reveal">
+          <img class="download-icon" src="media/icon-256.png" alt="润石 PoliShit 图标">
+          <p class="download-platform">macOS</p>
+          <h3>润石 PoliShit</h3>
+          <p>Apple Silicon · v1.5.0</p>
+          <a class="btn btn-primary btn-block" href="https://github.com/Choras4ai/polishit/releases/download/v1.5.0/runshi-polis-1.5.0-arm64.dmg">下载 macOS 版</a>
+        </article>
 
-<!-- ═══════════ THREE FEATURES ═══════════ -->
-<section class="section" id="features">
-  <h2 class="section-title">三大功能</h2>
-  <p class="section-subtitle">润色 · 降重 · 降AI率（图一乐版），中文写作全流程辅助</p>
+        <article class="download-card reveal">
+          <img class="download-icon" src="media/icon-256.png" alt="润石 PoliShit 图标">
+          <p class="download-platform">Windows</p>
+          <h3>润石 PoliShit</h3>
+          <p>64 位 · v1.5.0</p>
+          <a class="btn btn-secondary btn-block" href="https://github.com/Choras4ai/polishit/releases/download/v1.5.0/runshi-polis-setup-1.5.0.exe">下载 Windows 版</a>
+        </article>
+      </div>
+    </section>
+  </main>
 
-  <div class="features-grid">
-    <div class="feature-card">
-      <div class="feature-icon polish">✦</div>
-      <h3>AI 润色</h3>
-      <p>资深编辑级别的润色能力。自动识别文体（学术/公文/文学），从语法、标点、用词、逻辑、风格、节奏六个维度全面提升，遵循"宁可漏改，不可错改"原则。</p>
-      <span class="feature-tag cnki">符合 GB/T 15834</span>
+  <footer class="site-footer">
+    <p>润石 PoliShit © 2026</p>
+    <div class="footer-links">
+      <a href="https://github.com/Choras4ai/polishit" target="_blank" rel="noreferrer">GitHub</a>
+      <a href="terms.html">用户协议</a>
+      <a href="https://www.xiaohongshu.com/user/profile/5baad820f7e8b908db85cf62" target="_blank" rel="noreferrer">陈实之 · 小红书</a>
     </div>
-    <div class="feature-card">
-      <div class="feature-icon dedup">⇅</div>
-      <h3>降重</h3>
-      <p>面向查重场景改写文本表达方式，综合运用同义替换、句式变换、语序调整、概括转述等多种策略，帮助你在保留原意的前提下完成降重。</p>
-      <span class="feature-tag cnki">多策略降重</span>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon deai">👤</div>
-      <h3>降AI率（图一乐版）</h3>
-      <p>调整文本的写作风格，使表达更自然、更有个人痕迹。通过句式参差、个性化衔接和细节修饰等方法，做一个图一乐版的降AI率处理。</p>
-      <span class="feature-tag new">v1.4 新功能</span>
-    </div>
-  </div>
-</section>
+  </footer>
 
-<!-- ═══════════ HOW IT WORKS ═══════════ -->
-<section class="section">
-  <h2 class="section-title">三步搞定</h2>
-  <p class="section-subtitle">无需复杂配置，开箱即用</p>
-  <div class="steps">
-    <div class="step">
-      <div class="step-num">1</div>
-      <h4>选中文字</h4>
-      <p>在任意应用中选中需要处理的中文文本，浮窗工具栏自动出现</p>
-    </div>
-    <div class="step">
-      <div class="step-num">2</div>
-      <h4>一键处理</h4>
-      <p>点击「润色」「降重」或「降AI率（图一乐版）」，AI 即刻在原文上分析</p>
-    </div>
-    <div class="step">
-      <div class="step-num">3</div>
-      <h4>逐条审阅</h4>
-      <p>每处修改标注原因和替代方案，一键接受或忽略，完整修改稿一键复制</p>
-    </div>
-  </div>
-</section>
-
-<!-- ═══════════ AI PROVIDERS ═══════════ -->
-<section class="section">
-  <h2 class="section-title">灵活的 AI 后端</h2>
-  <p class="section-subtitle">2 个内置免费 API + 6 种主流服务商 + 本地模型，额度无上限</p>
-  <div class="providers">
-    <span class="provider-badge free">Together AI（内置免费）</span>
-    <span class="provider-badge free">硅基流动（内置免费）</span>
-    <span class="provider-badge">DeepSeek</span>
-    <span class="provider-badge">豆包</span>
-    <span class="provider-badge">Google Gemini</span>
-    <span class="provider-badge">Anthropic Claude</span>
-    <span class="provider-badge">OpenAI</span>
-    <span class="provider-badge">Ollama 本地</span>
-    <span class="provider-badge">自定义 API</span>
-  </div>
-  <p class="provider-note">* 硅基流动免费模型能力较弱，建议自行选用最新付费模型的 API 获得最佳效果</p>
-</section>
-
-<!-- ═══════════ DOWNLOAD ═══════════ -->
-<section class="download-section" id="download">
-  <h2 class="section-title">立即下载</h2>
-  <p class="section-subtitle">免费使用，无需注册</p>
-  <div class="download-card">
-    <h3>润石 PoliShit for macOS</h3>
-    <p class="version">v1.5.0 · Apple Silicon (arm64)</p>
-    <a class="btn btn-primary" href="https://github.com/nicecho/runshi/releases/latest/download/%E6%B6%A6%E7%9F%B3%20PoliShit-1.5.0-arm64.dmg" style="width:100%;justify-content:center;">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 12l-4-4h2.5V2h3v6H12L8 12zm-6 2h12v1.5H2V14z"/></svg>
-      下载 macOS .dmg
-    </a>
-    <p class="sys-req">系统要求：macOS 12.0+</p>
-    <p class="sys-req" style="color:#d93025;font-weight:500;margin-top:6px">⚠ 首次打开被拦截？<b>右键应用 → 打开 → 再点「打开」</b>即可。若仍提示「已损坏」，终端执行：<code style="background:#fce8e6;padding:2px 6px;border-radius:4px;font-size:11px">xattr -cr /Applications/润石\ PoliShit.app</code></p>
-  </div>
-  <div class="download-card" style="margin-top: 20px;">
-    <h3>润石 PoliShit for Windows</h3>
-    <p class="version">v1.5.0 · 64位</p>
-    <a class="btn btn-primary" href="https://github.com/nicecho/runshi/releases/latest/download/%E6%B6%A6%E7%9F%B3%20PoliShit%20Setup%201.5.0.exe" style="width:100%;justify-content:center;background:#2563eb;box-shadow:0 4px 14px rgba(37,99,235,0.35);">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 12l-4-4h2.5V2h3v6H12L8 12zm-6 2h12v1.5H2V14z"/></svg>
-      下载 Windows 安装包
-    </a>
-    <p class="sys-req">系统要求：Windows 10+ · 一键安装</p>
-  </div>
-</section>
-
-<footer>
-  <p>润石 PoliShit © 2025 · <a href="https://github.com/nicecho/runshi" target="_blank">GitHub</a> · <a href="terms.html">用户协议</a> · 润色构石，构石虽糙，一润成文</p>
-</footer>
-
+  <script src="site.js"></script>
 </body>
 </html>
