@@ -355,6 +355,37 @@
       .nav-links { display: none; }
     }
 
+    /* ── Membership ── */
+    .membership-section { padding: 80px 24px; background: linear-gradient(135deg, #f0faf5 0%, #e8f0fe 100%); }
+    .membership-inner { max-width: 900px; margin: 0 auto; }
+    .membership-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 48px; }
+    .plan-card {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 36px; text-align: center; transition: all 0.4s cubic-bezier(0.22,1,0.36,1);
+    }
+    .plan-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.08); }
+    .plan-card.featured {
+      border-color: var(--primary); position: relative;
+      box-shadow: 0 8px 30px rgba(74,124,107,0.15);
+    }
+    .plan-card.featured::before {
+      content: '⭐ 推荐'; position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+      background: var(--primary); color: #fff; font-size: 12px; font-weight: 600;
+      padding: 4px 16px; border-radius: 12px;
+    }
+    .plan-card h3 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+    .plan-price { font-size: 42px; font-weight: 800; color: var(--primary); margin: 16px 0 4px; }
+    .plan-price span { font-size: 16px; font-weight: 500; color: var(--fg2); }
+    .plan-desc { font-size: 14px; color: var(--fg2); margin-bottom: 20px; }
+    .plan-features { list-style: none; text-align: left; margin-bottom: 24px; }
+    .plan-features li {
+      font-size: 14px; padding: 6px 0; color: var(--fg2);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .plan-features li::before { content: '✓'; color: var(--primary); font-weight: 700; }
+    .plan-note { text-align: center; margin-top: 20px; font-size: 13px; color: var(--fg3); }
+    @media (max-width: 768px) { .membership-grid { grid-template-columns: 1fr; } }
+
     /* ── Scroll Reveal Animations ── */
     .scroll-reveal {
       opacity: 0;
@@ -448,6 +479,7 @@
     <div class="nav-links">
       <a href="#compare">为什么选润石 PoliShit</a>
       <a href="#features">功能</a>
+      <a href="#membership">会员</a>
       <a href="#download">下载</a>
       <a href="https://github.com/nicecho/runshi" target="_blank">GitHub</a>
     </div>
@@ -618,13 +650,49 @@
     <span class="provider-badge">Ollama 本地</span>
     <span class="provider-badge">自定义 API</span>
   </div>
-  <p class="provider-note">* 硅基流动免费模型能力较弱，建议自行选用最新付费模型的 API 获得最佳效果</p>
+  <p class="provider-note">* 硬基流动免费模型能力较弱，建议自行选用最新付费模型的 API 获得最佳效果，或直接开通会员 ↓</p>
+</section>
+
+<!-- ═══════════ MEMBERSHIP ═══════════ -->
+<section class="membership-section" id="membership">
+  <div class="membership-inner">
+    <h2 class="section-title scroll-reveal">不想配置 API？用会员模式</h2>
+    <p class="section-subtitle scroll-reveal">纯新手零配置上手，注册即用，自动调用最新 AI 模型</p>
+    <div class="membership-grid">
+      <div class="plan-card scroll-reveal-left">
+        <h3>免费版</h3>
+        <div class="plan-price">¥0 <span>/ 永久</span></div>
+        <p class="plan-desc">自带 API Key，无限使用</p>
+        <ul class="plan-features">
+          <li>2 个内置免费 API（基础模型）</li>
+          <li>支持自配 9 种服务商 API</li>
+          <li>润色 + 降AIGC 全功能</li>
+          <li>适合有 API 经验的用户</li>
+        </ul>
+        <a class="btn btn-secondary" href="#download" style="width:100%;justify-content:center;">免费下载</a>
+      </div>
+      <div class="plan-card featured scroll-reveal-right">
+        <h3>会员版</h3>
+        <div class="plan-price">¥9.9 <span>/ 月</span></div>
+        <p class="plan-desc">零配置，注册即用，无需懂 API</p>
+        <ul class="plan-features">
+          <li>自动调用最新顶级模型</li>
+          <li>每月 300 次调用额度</li>
+          <li>润色 + 降AIGC 全功能</li>
+          <li>无需配置，开箱即用</li>
+          <li>优先技术支持</li>
+        </ul>
+        <a class="btn btn-primary" href="#download" style="width:100%;justify-content:center;">下载后应用内开通</a>
+      </div>
+    </div>
+    <p class="plan-note">💡 会员无需配置任何 API Key，下载应用后直接注册登录即可使用</p>
+  </div>
 </section>
 
 <!-- ═══════════ DOWNLOAD ═══════════ -->
 <section class="download-section" id="download">
   <h2 class="section-title scroll-reveal">立即下载</h2>
-  <p class="section-subtitle scroll-reveal">免费使用，无需注册</p>
+  <p class="section-subtitle scroll-reveal">免费使用，或开通会员零配置直接用</p>
   <div class="download-card scroll-reveal-scale">
     <h3>润石 PoliShit for macOS</h3>
     <p class="version">v1.5.0 · Apple Silicon (arm64)</p>
