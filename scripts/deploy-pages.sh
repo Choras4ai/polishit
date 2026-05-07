@@ -8,8 +8,12 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 DOCS_DIR="$ROOT_DIR/docs"
 BUILD_SCRIPT="$ROOT_DIR/scripts/build-site-dist.sh"
 SITE_DIST_DIR="$ROOT_DIR/.site-dist"
-REPO="$(node -e "const url=require('$ROOT_DIR/package.json').repository.url||''; const m=url.match(/github\\.com[:/](.+?)\\.git$/); if(!m){process.exit(1)}; process.stdout.write(m[1])")"
-VERSION="$(node -e "process.stdout.write(require('$ROOT_DIR/package.json').version)")"
+NODE_BIN="${NODE_BIN:-node}"
+if ! command -v "$NODE_BIN" >/dev/null 2>&1 && [ -x "/Users/choras/local/node/bin/node" ]; then
+  NODE_BIN="/Users/choras/local/node/bin/node"
+fi
+REPO="$("$NODE_BIN" -e "const url=require('$ROOT_DIR/package.json').repository.url||''; const m=url.match(/github\\.com[:/](.+?)\\.git$/); if(!m){process.exit(1)}; process.stdout.write(m[1])")"
+VERSION="$("$NODE_BIN" -e "process.stdout.write(require('$ROOT_DIR/package.json').version)")"
 TARGET_BRANCH="${RUNSHI_PAGES_BRANCH:-gh-pages}"
 
 echo "=== 润石 PoliShit 官网发布 ==="
