@@ -3,33 +3,39 @@
 const OpenAIProvider = require('./openai-provider');
 const OllamaProvider = require('./ollama-provider');
 const AnthropicProvider = require('./anthropic-provider');
+const ProxyProvider = require('./proxy-provider');
 const { PRESETS } = require('./presets');
-const { getBuiltinKey, getSiliconFlowKey } = require('./builtin-key');
 
 /**
  * Create an AI provider based on current config.
  * Resolves preset → provider type → concrete instance.
  */
-function createProvider(providerConfig) {
+function createProvider(providerConfig, commercialConfig = null) {
+  if (commercialConfig?.enabled && commercialConfig?.backendUrl && commercialConfig?.authToken) {
+    return new ProxyProvider({
+      backendUrl: commercialConfig.backendUrl,
+      authToken: commercialConfig.authToken,
+      selectedModel: commercialConfig.selectedModel || '',
+      onUnauthorized: commercialConfig.onUnauthorized,
+    });
+  }
+
   const presetId = providerConfig?.preset || 'custom';
   const preset = PRESETS[presetId];
   const providerType = preset?.providerType || providerConfig?.type || 'openai';
-  const useBuiltinProviderConfig = presetId === 'together' || presetId === 'siliconflow';
+  const isCustomPreset = !preset || presetId === 'custom';
 
-  // Built-in free providers should always use their bundled credentials and defaults.
-  let apiKey = providerConfig?.apiKey || '';
-  if (presetId === 'together') {
-    apiKey = getBuiltinKey();
-  } else if (presetId === 'siliconflow') {
-    apiKey = getSiliconFlowKey();
+  const apiKey = providerConfig?.apiKey || '';
+  if (!apiKey && presetId !== 'ollama') {
+    throw new Error('请先在设置 → API 配置中填写 API Key。');
   }
 
-  const apiUrl = useBuiltinProviderConfig
-    ? (preset?.apiUrl || '')
-    : (providerConfig?.apiUrl || preset?.apiUrl || '');
-  const model = useBuiltinProviderConfig
-    ? (preset?.model || '')
-    : (providerConfig?.model || preset?.model || '');
+  const apiUrl = isCustomPreset
+    ? (providerConfig?.apiUrl || preset?.apiUrl || '')
+    : (preset?.apiUrl || providerConfig?.apiUrl || '');
+  const model = isCustomPreset
+    ? (providerConfig?.model || preset?.model || '')
+    : (preset?.model || providerConfig?.model || '');
 
   switch (providerType) {
     case 'openai':

@@ -1,0 +1,8 @@
+{
+  "version": "1.6.1",
+  "name": "润石 PoliShit 1.6.1",
+  "publishedAt": "2026-05-06T00:00:00.000Z",
+  "notes": "修复 Word 原位批阅写回与结果窗状态提示，修正积分包默认方案，更新官网、下载入口与技术报告。",
+  "pageUrl": "https://www.runshi.top/",
+  "downloadUrl": "https://github.com/Choras4ai/polishit/releases/tag/v1.6.1"
+}

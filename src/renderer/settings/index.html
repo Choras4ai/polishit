@@ -15,6 +15,7 @@
   <!-- Tabs -->
   <nav class="tabs">
     <button class="tab active" data-tab="home">首页</button>
+    <button class="tab" data-tab="account" id="tabAccount">账户</button>
     <button class="tab" data-tab="api">API 配置</button>
     <button class="tab" data-tab="shortcut">快捷键</button>
     <button class="tab" data-tab="general">通用</button>
@@ -25,7 +26,7 @@
   <!-- Home Tab -->
   <section class="tab-panel active" id="panel-home">
     <div class="home-hero">
-      <div class="home-icon">润</div>
+      <img class="home-icon-img" src="../../../assets/icon-256.png" alt="润石">
       <h1 class="home-title">润石 PoliShit</h1>
       <p class="home-slogan">润色构石，构石虽糙，一润成文。</p>
     </div>
@@ -48,6 +49,14 @@
         <span class="home-status-label">任务模式</span>
         <span class="home-status-value" id="homeTask">–</span>
       </div>
+      <div class="home-status-row">
+        <span class="home-status-label">商业账户</span>
+        <span class="home-status-value" id="homeAccount">–</span>
+      </div>
+      <div class="home-status-row">
+        <span class="home-status-label">月剩余额度</span>
+        <span class="home-status-value" id="homeCredits">–</span>
+      </div>
     </div>
 
     <!-- Quick start guide -->
@@ -57,18 +66,18 @@
         <div class="home-step">
           <span class="home-step-num">1</span>
           <div class="home-step-content">
-            <div class="home-step-title">配置 AI 服务</div>
-            <p class="home-step-desc">默认使用内置免费 API，可直接跳过此步。也可在「API 配置」中切换其他服务商。</p>
+            <div class="home-step-title">登录账户</div>
+            <p class="home-step-desc">在「账户」里用邮箱注册并登录；注册后会先发放 5 积分，可先体验标准模型润色。</p>
           </div>
-          <button class="home-step-btn" data-go-tab="api">前往 →</button>
+          <button class="home-step-btn" data-go-tab="account">前往 →</button>
         </div>
         <div class="home-step">
           <span class="home-step-num">2</span>
           <div class="home-step-content">
-            <div class="home-step-title">记住快捷键</div>
-            <p class="home-step-desc">选中文字后按下快捷键即可触发润色。也可在「快捷键」中自定义。</p>
+            <div class="home-step-title">☕ 一杯咖啡 = 300 基础积分</div>
+            <p class="home-step-desc">¥9.9 充值 300 基础积分；标准模型单轮约 800 字 / 1 积分，多轮和高阶模型按倍率累计。</p>
           </div>
-          <button class="home-step-btn" data-go-tab="shortcut">前往 →</button>
+          <button class="home-step-btn" data-go-tab="api">前往 →</button>
         </div>
         <div class="home-step">
           <span class="home-step-num">3</span>
@@ -87,8 +96,151 @@
     </div>
   </section>
 
+  <!-- Account Tab -->
+  <section class="tab-panel" id="panel-account">
+
+    <div class="form-group hidden">
+      <label class="form-label">商业模式</label>
+      <div class="toggle-row">
+        <div class="toggle-copy">
+          <div class="toggle-title">启用账户鉴权与积分代理</div>
+          <p class="form-hint">启用并登录后，桌面端请求会通过你的商业后端和部署模型；关闭后恢复原有直连模式。</p>
+        </div>
+        <label class="switch" for="commercialEnabled">
+          <input type="checkbox" id="commercialEnabled" checked>
+          <span class="switch-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="form-group hidden">
+      <label class="form-label" for="commercialBackendUrl">商业后端地址</label>
+      <input class="form-input" type="url" id="commercialBackendUrl"
+             placeholder="http://127.0.0.1:8787">
+      <p class="form-hint">本地开发默认使用 `http://127.0.0.1:8787`。生产环境建议切到你自己的 HTTPS 服务。</p>
+      <div class="form-actions form-actions-compact">
+        <button class="btn btn-secondary" id="btnTestCommercialBackend">测试后端</button>
+        <button class="btn btn-primary" id="btnSaveCommercialSettings">保存后端配置</button>
+        <span class="status-text" id="commercialBackendStatus"></span>
+      </div>
+    </div>
+
+    <!-- ── 未登录：登录/注册表单 ── -->
+    <div class="login-card" id="loginCard">
+      <div class="login-card-header">
+        <h2 class="login-card-title">登录润石账户</h2>
+        <p class="login-card-desc">登录后可使用多款 AI 模型进行中文润色</p>
+      </div>
+      <div class="login-card-body">
+        <div class="form-group">
+          <label class="form-label" for="loginEmail">邮箱</label>
+          <input class="form-input" type="email" id="loginEmail" placeholder="your@email.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="loginPassword">密码</label>
+          <input class="form-input" type="password" id="loginPassword" placeholder="至少 6 位" minlength="6">
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" id="btnCommercialLogin">登录</button>
+          <button class="btn btn-secondary" id="btnCommercialRegister">注册</button>
+          <span class="status-text" id="commercialAccountStatus"></span>
+        </div>
+        <p class="form-hint">新用户请先点「注册」，注册后自动登录并赠送 5 积分。</p>
+      </div>
+    </div>
+
+    <!-- ── 已登录：用户仪表盘 ── -->
+    <div class="account-dashboard hidden" id="accountDashboard">
+
+      <!-- 账户信息卡片 -->
+      <div class="account-card" id="accountCard">
+        <div class="account-card-header">
+          <div>
+            <div class="account-card-title" id="accountSubtitle">未登录</div>
+          </div>
+          <div class="account-card-actions">
+            <button class="btn btn-secondary btn-sm" id="btnRefreshCommercialStatus" type="button">刷新</button>
+            <button class="btn btn-secondary btn-sm" id="btnCommercialLogout" type="button">退出登录</button>
+          </div>
+        </div>
+        <div class="account-grid">
+          <div class="account-metric">
+            <span class="account-metric-label">邮箱</span>
+            <span class="account-metric-value" id="accountPhone">–</span>
+          </div>
+          <div class="account-metric">
+            <span class="account-metric-label">账户类型</span>
+            <span class="account-metric-value" id="accountPlanName">游客</span>
+          </div>
+          <div class="account-metric account-metric-wide">
+            <span class="account-metric-label">积分状态</span>
+            <span class="account-metric-value" id="accountSessionInfo">–</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 积分额度 -->
+      <div class="credits-card" id="creditsCard">
+        <div class="credits-header">
+          <span class="credits-title">积分余额</span>
+          <span class="credits-summary" id="creditsSummary">– / –</span>
+        </div>
+        <div class="credits-bar-track">
+          <div class="credits-bar-fill" id="creditsBarFill" style="width: 0%"></div>
+        </div>
+        <p class="credits-hint" id="creditsHint">登录并充值后显示积分额度</p>
+      </div>
+
+      <!-- 每日签到 -->
+      <div class="checkin-card" id="checkinCard">
+        <div class="checkin-header">
+          <span class="checkin-title">📅 每日签到</span>
+          <button class="btn btn-primary btn-sm" id="btnCheckin" type="button">签到领积分</button>
+        </div>
+        <div class="checkin-week" id="checkinWeek">
+          <div class="checkin-day" data-day="1"><span class="checkin-day-num">1</span><span class="checkin-day-pts">+1</span></div>
+          <div class="checkin-day" data-day="2"><span class="checkin-day-num">2</span><span class="checkin-day-pts">+1</span></div>
+          <div class="checkin-day" data-day="3"><span class="checkin-day-num">3</span><span class="checkin-day-pts">+1</span></div>
+          <div class="checkin-day" data-day="4"><span class="checkin-day-num">4</span><span class="checkin-day-pts">+1</span></div>
+          <div class="checkin-day" data-day="5"><span class="checkin-day-num">5</span><span class="checkin-day-pts">+1</span></div>
+          <div class="checkin-day" data-day="6"><span class="checkin-day-num">6</span><span class="checkin-day-pts">+1</span></div>
+          <div class="checkin-day" data-day="7"><span class="checkin-day-num">7</span><span class="checkin-day-pts">+1</span></div>
+        </div>
+        <p class="checkin-hint" id="checkinHint">每天签到领取 1 积分，积分可直接用于润色</p>
+      </div>
+
+      <!-- 模型选择 -->
+      <div class="model-picker" id="modelPicker">
+        <div class="model-picker-header">
+          <span class="model-picker-title">模型</span>
+        </div>
+        <div class="model-picker-list" id="modelList">
+          <!-- Populated by JS -->
+        </div>
+        <p class="model-picker-hint">倍率越高效果越好；积分消耗 = 字数基础积分 × 模型倍率，多轮模式会按实际轮次累计。</p>
+      </div>
+
+      <!-- 充值积分 -->
+      <div class="plans-section" id="plansSection">
+        <h3 class="plans-title">充值积分</h3>
+        <div class="plans-policy" id="creditPolicyCard">
+          <div class="plans-policy-title">积分规则</div>
+          <div class="plans-policy-body" id="creditPolicyBody">标准模型单轮约 800 字 / 1 积分；高阶模型按倍率计费；单次最多 12000 字。</div>
+          <div class="plans-policy-footnote" id="creditPolicyFootnote">修改说明属于附加分析，按半轮折算；自配 API 不走润石积分。</div>
+        </div>
+        <div class="plans-grid" id="plansGrid">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+    </div><!-- /accountDashboard -->
+
+  </section>
+
   <!-- API Tab -->
   <section class="tab-panel" id="panel-api">
+    <p class="panel-intro">高级用户可以自配 API，直接填写自己的 API 地址、模型和 Key 来使用。</p>
+
     <div class="form-group">
       <label class="form-label">AI 服务商</label>
       <select class="form-select" id="presetSelect">
@@ -135,6 +287,20 @@
       <button class="btn btn-primary" id="btnSaveApi">保存</button>
       <span class="status-text" id="apiStatus"></span>
     </div>
+
+    <!-- 启用自配 API 开关（测试通过后再开启） -->
+    <div class="source-toggle-card" id="sourceToggleCard">
+      <div class="toggle-row">
+        <div class="toggle-copy">
+          <div class="toggle-title">启用自配 API</div>
+          <p class="form-hint" id="sourceToggleHint">配置并测试通过后，开启此开关即可使用自己的 API；关闭后恢复使用润石积分。</p>
+        </div>
+        <label class="switch" for="sourceToggle">
+          <input type="checkbox" id="sourceToggle">
+          <span class="switch-slider"></span>
+        </label>
+      </div>
+    </div>
   </section>
 
   <!-- Shortcut Tab -->
@@ -142,7 +308,7 @@
     <div class="form-group">
       <label class="form-label">当前快捷键</label>
       <div class="shortcut-display">
-        <kbd id="currentShortcut">Ctrl+Shift+A</kbd>
+        <kbd id="currentShortcut">Ctrl+Alt+V</kbd>
       </div>
     </div>
     <div class="form-group">
@@ -151,6 +317,7 @@
       <div class="shortcut-capture" id="shortcutCapture" tabindex="0">
         点击此处，然后按下快捷键…
       </div>
+      <p class="form-hint">当前仅支持系统级组合键，不支持 Ctrl/Cmd + C + V、双击 C 这类连续或多主键序列；Electron 全局快捷键只能监听一个主键配合修饰键。</p>
       <button class="btn btn-primary" id="btnSaveShortcut" disabled>保存快捷键</button>
       <span class="status-text" id="shortcutStatus"></span>
     </div>
@@ -180,6 +347,26 @@
       </div>
     </div>
     <div class="form-group">
+      <label class="form-label">文体模式</label>
+      <div class="radio-group">
+        <label class="radio-item">
+          <input type="radio" name="genreMode" value="academic" checked>
+          <span>学术论文</span>
+          <span class="radio-desc">严格保留术语、论证结构、引用格式，不改变论证强度</span>
+        </label>
+        <label class="radio-item">
+          <input type="radio" name="genreMode" value="business">
+          <span>商务公文</span>
+          <span class="radio-desc">保持正式简洁的商务语体，保留数据和专业表述</span>
+        </label>
+        <label class="radio-item">
+          <input type="radio" name="genreMode" value="casual">
+          <span>日常写作</span>
+          <span class="radio-desc">尊重个人表达风格，允许适度优化，不过度书面化</span>
+        </label>
+      </div>
+    </div>
+    <div class="form-group">
       <label class="form-label">默认任务模式</label>
       <div class="radio-group">
         <label class="radio-item">
@@ -188,14 +375,9 @@
           <span class="radio-desc">修正语法、标点、用词、风格等问题</span>
         </label>
         <label class="radio-item">
-          <input type="radio" name="taskMode" value="dedup">
-          <span>降重</span>
-          <span class="radio-desc">面向查重场景改写文本表达，综合运用多种策略进行降重</span>
-        </label>
-        <label class="radio-item">
           <input type="radio" name="taskMode" value="deai">
-          <span>降AI率（图一乐版）</span>
-          <span class="radio-desc">调整表达风格，让文本更像人写的；名称中的括号内容会保留显示</span>
+          <span>降AIGC</span>
+          <span class="radio-desc">调整表达风格，让文本更自然、更有人写的痕迹</span>
         </label>
       </div>
     </div>
@@ -233,18 +415,13 @@
     <p class="panel-intro">为每种模式添加额外提示词，会合并到对应模式的系统提示词中，作为额外偏好。留空则使用默认提示词。</p>
     <div class="form-group">
       <label class="form-label" for="customPromptPolish">✦ 润色额外提示词</label>
-      <textarea class="form-textarea" id="customPromptPolish" rows="4"
-                placeholder="例如：保留我的个人表达习惯；尽量减少书面腔；遇到引号内容不要改。"></textarea>
+      <textarea class="form-textarea" id="customPromptPolish" rows="5"
+                placeholder="示例（可组合使用）：&#10;• 这是 SCI 论文的 Discussion，请保持学术严谨性&#10;• 审稿人说逻辑衔接不够清晰，重点优化段落间过渡&#10;• 保留「数据驱动」等我惯用的表达，不要替换同义词&#10;• 导师偏好简洁风格，少用修饰性形容词"></textarea>
     </div>
     <div class="form-group">
-      <label class="form-label" for="customPromptDedup">⇅ 降重额外提示词</label>
-      <textarea class="form-textarea" id="customPromptDedup" rows="4"
-                placeholder="例如：优先打散句式，不要把句子改得太口语；保留学术术语。"></textarea>
-    </div>
-    <div class="form-group">
-      <label class="form-label" for="customPromptDeai">👤 降AI率（图一乐版）额外提示词</label>
-      <textarea class="form-textarea" id="customPromptDeai" rows="4"
-                placeholder="例如：更像本科生自然写作；避免过度模板化过渡词；保留专业性。"></textarea>
+      <label class="form-label" for="customPromptDeai">👤 降AIGC额外提示词</label>
+      <textarea class="form-textarea" id="customPromptDeai" rows="5"
+                placeholder="示例（可组合使用）：&#10;• 这是本科毕业论文，语言风格要像大学生自己写的&#10;• 我的专业是计算机科学，保留所有专业术语&#10;• 不要用太多四字成语，我平时写作不太用&#10;• 知网查的比较严格，尽量多做句式变换"></textarea>
     </div>
     <div class="form-actions">
       <button class="btn btn-primary" id="btnSavePrompts">保存</button>
@@ -256,12 +433,12 @@
   <section class="tab-panel" id="panel-about">
     <div class="about-content">
       <div class="about-header">
-        <div class="about-icon">润</div>
+        <img class="about-icon-img" src="../../../assets/icon-256.png" alt="润石">
         <h2 class="about-title">润石 PoliShit</h2>
-        <p class="about-version">Version 1.5.0</p>
+        <p class="about-version">Version <span id="aboutVersion">--</span></p>
         <p class="about-desc">
           润色构石，构石虽糙，一润成文。<br>
-          选中文字，一键润色/降重/降AI率（图一乐版），修改意见悬浮呈现。
+          选中文字，一键润色/降AIGC，修改意见悬浮呈现。
         </p>
         <p class="about-desc-sub">
           通俗来说：选中任何中文文字，按快捷键，AI 帮你改得更好。
@@ -270,6 +447,20 @@
           ⚠️ 本工具仅辅助写作，所有建议仅供参考。请遵守所在机构的学术诚信规定。
         </p>
       </div>
+
+      <section class="about-update-card">
+        <div class="about-update-header">
+          <div>
+            <div class="about-update-title">版本更新</div>
+            <div class="about-update-status" id="aboutUpdateStatus">尚未检查更新</div>
+          </div>
+          <div class="inline-row">
+            <button class="btn btn-secondary" id="btnCheckUpdates" type="button">检查更新</button>
+            <button class="btn btn-primary hidden" id="btnOpenLatestRelease" type="button">前往下载</button>
+          </div>
+        </div>
+        <p class="about-update-meta" id="aboutUpdateMeta">当前版本 --</p>
+      </section>
 
       <section class="about-showcase">
         <div class="about-showcase-header">
@@ -283,8 +474,7 @@
           </p>
           <div class="about-demo-toolbar">
             <span class="about-demo-tool about-demo-tool-active">✦ 润色</span>
-            <span class="about-demo-tool">⇅ 降重</span>
-            <span class="about-demo-tool">👤 降AI率（图一乐版）</span>
+            <span class="about-demo-tool">👤 降AIGC</span>
           </div>
         </div>
 
@@ -320,7 +510,7 @@
       </section>
 
       <div class="about-features">
-        <div class="feature-item">🔒 隐私优先：不存储、不上传、不监听</div>
+        <div class="feature-item">🔒 模式可选：可直连自配 API，也可走会员托管后端</div>
         <div class="feature-item">⚡ 极速响应：全局快捷键即时触发</div>
         <div class="feature-item">🤖 多智能体：语法 + 风格分步润色</div>
         <div class="feature-item">📝 逐条审阅：每处修改可独立接受或拒绝</div>
@@ -329,10 +519,10 @@
       <div class="about-author">
         <div class="about-author-label">开发者</div>
         <a class="about-author-link" id="authorLink" href="#">
-          <span class="about-author-avatar">C</span>
+          <span class="about-author-avatar">陈</span>
           <div class="about-author-info">
-            <span class="about-author-name">Choras Chan</span>
-            <span class="about-author-url">choraschan.github.io</span>
+            <span class="about-author-name">陈实之</span>
+            <span class="about-author-url">小红书主页</span>
           </div>
           <span class="about-author-arrow">→</span>
         </a>

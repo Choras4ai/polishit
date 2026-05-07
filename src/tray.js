@@ -32,7 +32,7 @@ class TrayManager {
   refreshMenu() {
     if (!this.tray) return;
 
-    const shortcut = this.config.get('shortcut') || 'CommandOrControl+Shift+A';
+    const shortcut = this.config.get('shortcut') || 'CommandOrControl+Alt+V';
     let display;
     if (isMac) {
       display = shortcut

@@ -122,7 +122,7 @@ class SelectionWatcher {
 
     // Clipboard triggers require more text to avoid false positives
     if (text && text.length >= 6 && /[\u4e00-\u9fff]/.test(text)) {
-      this._emitSelection(text, 'clipboard', null);
+      this._emitSelection(text, 'clipboard', null, null, { rawText });
     } else {
       this._maybeClear('clipboard');
     }
@@ -142,7 +142,7 @@ class SelectionWatcher {
       if (text === '__SELF__') return;
 
       if (this._isTriggerableText(text)) {
-        this._emitSelection(text, 'selection', null);
+        this._emitSelection(text, 'selection', null, null, { rawText: stdout || '' });
       } else {
         this._maybeClear('selection');
       }
@@ -150,19 +150,29 @@ class SelectionWatcher {
   }
 
   _handleSelectionPayload(payload) {
-    const text = this._normalizeText(payload.text);
+    const rawText = typeof payload.text === 'string' ? payload.text : '';
+    const text = this._normalizeText(rawText);
     if (text === '__SELF__') return;
 
     if (this._isTriggerableText(text)) {
       const selectionBounds = this._normalizeBounds(payload.selectionBounds);
       const elementBounds = this._normalizeBounds(payload.elementBounds);
-      this._emitSelection(text, 'selection', selectionBounds, elementBounds);
+      this._emitSelection(text, 'selection', selectionBounds, elementBounds, {
+        rawText,
+        selectionContext: {
+          text: rawText,
+          bundleIdentifier: payload.bundleIdentifier || '',
+          frontmostPid: Number.isFinite(Number(payload.frontmostPid)) ? Number(payload.frontmostPid) : null,
+          selectionRange: this._normalizeRange(payload.selectionRange),
+          supportsRangeEditing: Boolean(payload.supportsRangeEditing),
+        },
+      });
     } else {
       this._maybeClear('selection');
     }
   }
 
-  _emitSelection(text, source, bounds, fieldBounds = null) {
+  _emitSelection(text, source, bounds, fieldBounds = null, extra = {}) {
     const cursorPos = screen.getCursorScreenPoint();
     const validBounds = this._isBoundsNearPoint(bounds, cursorPos) ? bounds : null;
     const validFieldBounds = this._isBoundsNearPoint(fieldBounds, cursorPos, 320) ? fieldBounds : null;
@@ -183,10 +193,12 @@ class SelectionWatcher {
         x: cursorPos.x,
         y: cursorPos.y,
         text,
+        rawText: typeof extra.rawText === 'string' ? extra.rawText : text,
         textLength: text.length,
         source,
         bounds: validBounds,
         fieldBounds: validFieldBounds,
+        selectionContext: extra.selectionContext || null,
       });
     }
   }
@@ -239,6 +251,18 @@ class SelectionWatcher {
       y: Math.round(y),
       width: Math.max(1, Math.round(width)),
       height: Math.max(1, Math.round(height)),
+    };
+  }
+
+  _normalizeRange(range) {
+    if (!range) return null;
+    const location = Number(range.location);
+    const length = Number(range.length);
+    if (!Number.isFinite(location) || !Number.isFinite(length)) return null;
+    if (location < 0 || length < 0) return null;
+    return {
+      location: Math.round(location),
+      length: Math.round(length),
     };
   }
 

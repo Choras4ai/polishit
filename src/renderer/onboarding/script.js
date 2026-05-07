@@ -9,7 +9,7 @@ let selectedPreset = null;
 const _isMac = window.polishAPI.platform === 'darwin';
 if (!_isMac) {
   const badge = document.getElementById('shortcutBadge');
-  if (badge) badge.textContent = 'Ctrl+Shift+A';
+  if (badge) badge.textContent = 'Ctrl+Alt+V';
   const tip = document.getElementById('tipPermission');
   if (tip) tip.style.display = 'none';
 }

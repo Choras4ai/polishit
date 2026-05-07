@@ -14,6 +14,20 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 *.log
+.site-dist/
+.publish/
 *.dmg
 *.exe
 *.blockmap
+data/
+
+# 内部材料：参赛/白皮书/演示稿等私人文件，不公开
+docs/*.docx
+docs/*.pdf
+docs/.~*.docx
+docs/gen_whitepaper.py
+docs/downloads/
+
+# 个人本地工作目录占位
+/electron
+/runshi@*

@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>润石 PoliShit - 技术报告</title>
+  <meta name="description" content="润石 PoliShit v1.6.1 技术报告，覆盖客户端、AI 管线、商业后端、支付、安全、部署与测试。">
+  <link rel="icon" type="image/png" href="logo-64.png?v=3">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: #fafbfc;
+      color: #1d1d1f;
+      line-height: 1.78;
+      -webkit-font-smoothing: antialiased;
+    }
+    header {
+      border-bottom: 1px solid #e5e7eb;
+      background: rgba(250,251,252,.88);
+      backdrop-filter: blur(18px);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .nav {
+      max-width: 980px;
+      margin: 0 auto;
+      height: 60px;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .brand {
+      color: #2f6f5e;
+      text-decoration: none;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .brand img { width: 30px; height: 30px; border-radius: 7px; }
+    .nav a { color: #4b5563; text-decoration: none; font-size: 14px; }
+    main {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 56px 24px 96px;
+    }
+    .hero { margin-bottom: 44px; }
+    .eyebrow {
+      color: #2f6f5e;
+      font-weight: 700;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+    h1 {
+      font-size: 40px;
+      line-height: 1.18;
+      margin-bottom: 14px;
+      letter-spacing: 0;
+    }
+    .lead {
+      max-width: 760px;
+      color: #4b5563;
+      font-size: 17px;
+    }
+    section { margin-top: 42px; }
+    h2 {
+      font-size: 24px;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    h3 {
+      font-size: 17px;
+      margin: 22px 0 8px;
+    }
+    p, li { color: #3f4652; font-size: 15px; }
+    ul, ol { padding-left: 22px; margin: 8px 0 0; }
+    li { margin-bottom: 6px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0;
+      font-size: 14px;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+    }
+    th, td {
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 1px solid #edf0f2;
+      vertical-align: top;
+    }
+    th { color: #111827; background: #f5f7f8; font-weight: 700; }
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      background: #eef3f1;
+      color: #245748;
+      padding: 2px 5px;
+      border-radius: 5px;
+      font-size: 13px;
+    }
+    pre {
+      background: #111827;
+      color: #f9fafb;
+      padding: 16px;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 14px 0;
+      font-size: 13px;
+      line-height: 1.7;
+    }
+    pre code { background: transparent; color: inherit; padding: 0; }
+    .notice {
+      border-left: 4px solid #2f6f5e;
+      background: #eef7f3;
+      padding: 14px 16px;
+      margin: 18px 0;
+      color: #245748;
+    }
+    footer {
+      border-top: 1px solid #e5e7eb;
+      padding: 28px 24px;
+      text-align: center;
+      color: #6b7280;
+      font-size: 13px;
+    }
+    footer a { color: #2f6f5e; text-decoration: none; }
+    @media (max-width: 720px) {
+      h1 { font-size: 30px; }
+      .nav { padding: 0 16px; }
+      main { padding: 40px 16px 72px; }
+      table { display: block; overflow-x: auto; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="nav">
+      <a class="brand" href="index.html">
+        <img src="logo-64.png?v=3" alt="润石">
+        润石 PoliShit
+      </a>
+      <a href="index.html">返回首页</a>
+    </div>
+  </header>
+
+  <main>
+    <div class="hero">
+      <div class="eyebrow">v1.6.1 · 2026-05-06 · 技术报告</div>
+      <h1>润石 PoliShit 项目技术报告</h1>
+      <p class="lead">本文基于当前项目代码整理，覆盖桌面客户端、AI 管线、结果审阅、商业后端、积分支付、安全合规、官网部署和测试状态。</p>
+    </div>
+
+    <section>
+      <h2>1. 项目定位</h2>
+      <p>润石 PoliShit 是一款中文写作辅助桌面应用，面向 Word、WPS、VSCode、浏览器文本框等真实写作环境。当前只保留两个功能：润色和降AIGC。产品不提供代写、代投、考试作弊或规避学术规范服务，AI 输出只作为用户审阅的修改建议。</p>
+      <table>
+        <tr><th>项目</th><th>状态</th></tr>
+        <tr><td>版本</td><td><code>1.6.1</code></td></tr>
+        <tr><td>安装包</td><td><code>runshi-polis-1.6.1-arm64.dmg</code>、<code>runshi-polis-setup-1.6.1.exe</code></td></tr>
+        <tr><td>官网</td><td><code>https://www.runshi.top</code></td></tr>
+        <tr><td>更新清单</td><td><code>https://www.runshi.top/version.json</code></td></tr>
+        <tr><td>支付</td><td>代码预留微信 / 支付宝回调，真实商户仍需联调</td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>2. 总体架构</h2>
+      <pre><code>用户选中文本
+  ↓
+选区监听 / 文本捕获
+  ↓
+Electron 主进程 IPC 编排
+  ↓
+AgentPipeline 调用模型
+  ↓
+DiffEngine 生成逐条建议
+  ↓
+结果窗审阅
+  ↓
+复制、替换或 Word 原位写回</code></pre>
+      <p>客户端使用 Electron 28，前端为原生 HTML/CSS/JavaScript。商业后端使用 Express.js + SQLite，提供账户、积分、订单、支付回调和 AI 代理。官网为 <code>docs/</code> 下的静态站点，由 GitHub Pages 发布。</p>
+    </section>
+
+    <section>
+      <h2>3. 客户端模块</h2>
+      <table>
+        <tr><th>模块</th><th>文件</th><th>职责</th></tr>
+        <tr><td>主进程</td><td><code>main.js</code></td><td>生命周期、IPC、触发流程、更新检查、商业状态</td></tr>
+        <tr><td>安全桥接</td><td><code>preload.js</code></td><td>通过白名单 API 暴露 renderer 能力</td></tr>
+        <tr><td>捕获写回</td><td><code>src/capture.js</code></td><td>剪贴板捕获、粘贴、Word 原位修订</td></tr>
+        <tr><td>AI 管线</td><td><code>src/ai/pipeline.js</code></td><td>语言检测、提示词、模型输出清洗、解释生成</td></tr>
+        <tr><td>Diff</td><td><code>src/diff.js</code></td><td>字符级修改定位</td></tr>
+        <tr><td>结果窗</td><td><code>src/renderer/result</code></td><td>逐条审阅、状态提示、完整修改稿</td></tr>
+        <tr><td>设置页</td><td><code>src/renderer/settings</code></td><td>API、账户、积分、快捷键、提示词、更新</td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>4. AI 与审阅链路</h2>
+      <p>润石会根据任务类型选择润色或降AIGC提示词，并按学术、商务、随笔三种体裁注入规则。模型输出会统一换行、空格和零宽字符，避免不可见 diff。结果页按字符级差异显示修改，支持接受、忽略、重试、复制和完整选用。</p>
+      <p>Word 写回路径在 v1.6.1 中做了增强：优先写回当前活选区，失败后回退 range 定位，并尝试附近偏移位点。如果写回失败，结果窗会明确提示“仅当前窗口暂存，Word 原文尚未改动”。</p>
+    </section>
+
+    <section>
+      <h2>5. 商业后端与积分</h2>
+      <p>后端提供设备注册、邮箱/手机号登录、签到、积分包、订单、支付回调、模型列表和 AI 代理。当前积分包为：</p>
+      <ul>
+        <li><code>runshi-basic</code>：¥9.9 / 300 积分</li>
+        <li><code>runshi-pro</code>：¥29.9 / 1000 积分</li>
+        <li>标准计费约 800 字 / 1 基础积分，支持 0.5 积分粒度</li>
+        <li>上游失败会自动退款</li>
+      </ul>
+      <p>后端包含限流、请求队列、熔断、成本保护和单身份任务锁，降低刷取服务和并发扣费风险。</p>
+    </section>
+
+    <section>
+      <h2>6. 支付与上线风险</h2>
+      <p>微信支付和支付宝代码已预留下单、回调验签、金额校验、订单状态校验和重复通知保护。真实上线前必须完成公网 HTTPS、商户证书、真实小额订单、回调入账、重复回调和退款失败场景验证。</p>
+      <div class="notice">当前支付系统不能视为正式生产闭环。未完成真实商户联调前，建议保持 manual 或隐藏支付入口。</div>
+    </section>
+
+    <section>
+      <h2>7. 数据安全</h2>
+      <p>润石支持三种数据路径：自配 API 直连用户模型服务、会员托管经润石后端代理、Ollama 本地离线。客户端不会将用户自配 API Key 上传到润石后端。后端只应处理账户、设备、订单、积分、签到、请求元数据和必要日志，不应将用户正文用于训练。</p>
+    </section>
+
+    <section>
+      <h2>8. 测试与发布</h2>
+      <pre><code>npm test
+node --check main.js
+node --check preload.js
+node --check src/capture.js
+node --check src/ai/pipeline.js
+node --check src/renderer/result/script.js
+node --check src/renderer/settings/script.js
+node --check docs/site.js
+node --check server/index.js</code></pre>
+      <p>官网文件位于 <code>docs/</code>。GitHub Actions 会部署 Pages；手动脚本 <code>scripts/deploy-pages.sh</code> 发布到 <code>gh-pages</code> 分支，不覆盖源码主分支。</p>
+    </section>
+
+    <section>
+      <h2>9. 结论</h2>
+      <p>v1.6.1 已形成桌面客户端、AI 管线、积分包后端、官网和自动更新的基本闭环，适合继续内测或开源预览。正式商业上线前，还需要支付商户联调、代码签名、公证、生产监控、备份策略和隐私政策复审。</p>
+    </section>
+  </main>
+
+  <footer>
+    润石 PoliShit © 2026 · <a href="index.html">首页</a> · <a href="terms.html">用户协议</a> · <a href="https://github.com/Choras4ai/polishit" target="_blank" rel="noreferrer">GitHub</a>
+  </footer>
+</body>
+</html>

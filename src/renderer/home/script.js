@@ -6,7 +6,7 @@
   const status = await window.polishAPI.getToolbarStatus();
 
   // Shortcut display
-  const shortcut = config.shortcut || 'CommandOrControl+Shift+A';
+  const shortcut = config.shortcut || 'CommandOrControl+Alt+V';
   const isMac = window.polishAPI.platform === 'darwin';
   let display;
   if (isMac) {
@@ -40,6 +40,6 @@
   });
 
   document.getElementById('btnHelp').addEventListener('click', () => {
-    window.polishAPI.openExternal('https://nicecho.github.io/runshi/');
+    window.polishAPI.openExternal('https://www.runshi.top/');
   });
 })();

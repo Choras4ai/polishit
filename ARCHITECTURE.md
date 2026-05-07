@@ -1,8 +1,8 @@
-# 中文润色 — 项目架构文档
+# 润石 PoliShit — 项目架构文档
 
-> 最后更新: 2026-04-10 v1.5.0
-> 维护者: choras
-> 本文档是项目的"唯一真相源"，后续所有模块修改必须同步更新本文档。
+> 最后更新: 2026-05-06 v1.6.1  
+> 维护者: 陈实之 / Choras4ai  
+> 当前完整技术报告见 [TECHNICAL_REPORT.md](./TECHNICAL_REPORT.md)。本文保留模块级架构说明，后续模块修改需同步更新技术报告和本文件。
 
 ---
 
@@ -11,7 +11,7 @@
 一款跨平台（macOS / Windows）桌面工具，核心流程：
 
 ```
-选中文本 → 全局快捷键 → AI润色 → Grammarly风格内联标注 → 逐条审阅/一键替换
+选中文本 → 全局快捷键 → AI润色 → Grammarly风格内联标注 → 逐条审阅/原位修订或一键替换
 ```
 
 **核心原则**: 轻量、隐私优先、无侵入、用完即走、Grammarly 式交互体验。
@@ -153,7 +153,7 @@ APP-中文润色/
     "apiKey": "",
     "model": ""
   },
-  "shortcut": "CommandOrControl+Shift+A",
+  "shortcut": "CommandOrControl+Alt+V",
   "pipeline": {
     "mode": "single | multi",
     "temperature": 0.3
@@ -206,6 +206,14 @@ APP-中文润色/
 2. `restoreFrontApp()` 通过 AppleScript 重新激活原始应用
 3. 等待 300ms 确保窗口切换完成
 4. 模拟 `Cmd+V` 粘贴
+
+**v1.6.2 新增**: macOS 原位修订链路
+1. `selection_probe.swift` 读取原始选区的 `AXSelectedTextRange`
+2. `DiffEngine` 为每条修改附带 `originalStart/originalEnd`
+3. renderer 接受单条修改时，经 `action:apply-review-change` 把字符级变更送到 main
+4. main 维护一次批阅会话中的 `selectionStart/currentText/appliedChanges`
+5. `applyTextEdit()` 先通过 Accessibility API 重新定位到目标子 range，再只对该范围执行粘贴或删除
+6. 修改完成后，结果窗重新取回焦点，继续下一条批阅
 
 **平台支持**:
 - macOS: AppleScript (`osascript`)
@@ -515,7 +523,7 @@ Loading ──[polish:result]──→ ResultView（有修改）
 **快捷键录制机制**:
 - 聚焦 capture 区域后监听 `keydown`
 - 要求至少包含一个修饰键（⌘/⌃/⌥）
-- 格式化为 Electron accelerator 格式（如 `CommandOrControl+Shift+A`）
+- 格式化为 Electron accelerator 格式（如 `CommandOrControl+Alt+V`）
 - 保存时实时更新全局快捷键注册
 
 **修改指南**:
@@ -531,7 +539,7 @@ Loading ──[polish:result]──→ ResultView（有修改）
 **流程**: 3 步向导
 1. **欢迎页** — 功能介绍 + 两个入口：「立即体验」(Together AI 内置) / 「自行配置」
 2. **选择服务商** — 显示所有预设供选择，需要 Key 的预设显示输入框
-3. **准备就绪** — 展示快捷键 ⌘⇧A，提示辅助功能权限
+3. **准备就绪** — 展示快捷键 ⌘⌥V，提示辅助功能权限
 
 **触发条件**: `config.onboarding.completed === false`（首次启动）
 

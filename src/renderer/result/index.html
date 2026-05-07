@@ -20,8 +20,7 @@
       <!-- Mode toggle -->
       <div class="mode-toggle" id="modeToggle">
         <button class="mode-btn active" data-task="polish" title="润色模式">润色</button>
-        <button class="mode-btn" data-task="dedup" title="降重">降重</button>
-        <button class="mode-btn" data-task="deai" title="降AI率（图一乐版）">降AI率（图一乐版）</button>
+        <button class="mode-btn" data-task="deai" title="降AIGC">降AIGC</button>
       </div>
       <button class="icon-btn" id="btnSettings" title="设置">
         <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
@@ -40,7 +39,8 @@
   <!-- Loading -->
   <section class="state-view" id="loadingView">
     <div class="spinner"></div>
-    <p class="state-text" id="loadingText">正在分析文本...</p>
+    <p class="state-text loading-model" id="loadingModel"></p>
+    <p class="state-text loading-flavor" id="loadingText">正在分析文本...</p>
     <div class="progress-track">
       <div class="progress-fill" id="progressFill"></div>
     </div>
@@ -50,7 +50,10 @@
   <section class="state-view hidden" id="errorView">
     <div class="state-icon state-icon-error">!</div>
     <p class="state-text" id="errorText"></p>
-    <button class="btn btn-primary" id="btnErrorSettings" style="display:none">打开设置</button>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn btn-primary" id="btnErrorRetry">重试</button>
+      <button class="btn btn-primary" id="btnErrorSettings" style="display:none">打开设置</button>
+    </div>
   </section>
 
   <!-- No changes -->
@@ -66,12 +69,18 @@
       <div class="pane-header">
         <span class="pane-title">修改建议</span>
         <div class="pane-actions">
+          <select class="model-select" id="modelSelect" title="选择模型重新生成"></select>
           <button class="btn-sm btn-sm-ghost" id="btnRejectAll">全部忽略</button>
           <button class="btn-sm btn-sm-accent" id="btnAcceptAll">全部接受</button>
-          <button class="btn-sm btn-sm-primary" id="btnApplyAccepted" disabled title="应用已接受的修改并替换原文">确认选用</button>
+          <button class="btn-sm btn-sm-ghost" id="btnRegenerate" title="换一种润色方案">🔄 换一种</button>
+          <button class="btn-sm btn-sm-ghost" id="btnRecapture" title="重新抓取选中文本">📋 重选</button>
         </div>
       </div>
       <div class="diff-body" id="diffBody"></div>
+      <div class="pane-footer pane-footer-top">
+        <span class="pane-footer-hint" id="actionHint"></span>
+        <button class="btn-sm btn-sm-primary" id="btnApplyAccepted" disabled title="应用已接受的修改并替换原文">确认选用</button>
+      </div>
     </div>
 
     <!-- Resizable divider -->
@@ -83,21 +92,16 @@
     <div class="pane pane-bottom">
       <div class="pane-header">
         <span class="pane-title">完整修改稿</span>
-        <div class="pane-actions">
+      </div>
+      <div class="polished-body" id="polishedBody"></div>
+      <div class="pane-footer pane-footer-bottom">
+        <div class="pane-actions pane-actions-footer">
           <button class="btn-sm btn-sm-ghost" id="btnCopyPolished" title="复制到剪贴板">复制</button>
           <button class="btn-sm btn-sm-primary" id="btnUsePolished">直接选用</button>
         </div>
       </div>
-      <div class="polished-body" id="polishedBody"></div>
     </div>
   </section>
-
-  <!-- Middle action bar (for partial accept → replace) -->
-  <footer class="action-bar hidden" id="actionBar">
-    <span class="action-hint" id="actionHint"></span>
-    <div class="action-spacer"></div>
-    <button class="btn btn-primary" id="btnReplace">替换原文（已选修改）</button>
-  </footer>
 
   <!-- Popup card for hover suggestions -->
   <div class="popup-card hidden" id="popupCard">

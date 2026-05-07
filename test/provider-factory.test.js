@@ -16,20 +16,7 @@ test('built-in Together preset ignores stale user overrides', () => {
 
   assert.equal(provider.apiUrl, PRESETS.together.apiUrl);
   assert.equal(provider.model, PRESETS.together.model);
-  assert.notEqual(provider.apiKey, 'stale-user-key');
-});
-
-test('built-in SiliconFlow preset ignores stale user overrides', () => {
-  const provider = createProvider({
-    preset: 'siliconflow',
-    apiUrl: 'https://example.com/should-not-be-used',
-    apiKey: 'stale-user-key',
-    model: 'stale-model',
-  });
-
-  assert.equal(provider.apiUrl, PRESETS.siliconflow.apiUrl);
-  assert.equal(provider.model, PRESETS.siliconflow.model);
-  assert.notEqual(provider.apiKey, 'stale-user-key');
+  assert.equal(provider.apiKey, 'stale-user-key');
 });
 
 test('custom preset keeps explicit user configuration', () => {

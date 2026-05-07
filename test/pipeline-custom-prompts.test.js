@@ -3,7 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { AgentPipeline } = require('../src/ai/pipeline');
+const { AgentPipeline, normalizeModelOutputText } = require('../src/ai/pipeline');
 
 function createConfig(customPrompts = {}) {
   return {
@@ -13,7 +13,6 @@ function createConfig(customPrompts = {}) {
         'pipeline.mode': 'single',
         'pipeline.temperature': 0.3,
         'pipeline.customPrompts.polish': customPrompts.polish || '',
-        'pipeline.customPrompts.dedup': customPrompts.dedup || '',
         'pipeline.customPrompts.deai': customPrompts.deai || '',
       };
       return values[key];
@@ -34,7 +33,7 @@ test('custom polish prompt is appended to the system prompt', async () => {
     polish: '尽量保留我的轻口语表达，不要过度书面化。',
   }));
 
-  const result = await pipeline._singleAgent('原始文本', 0.3, () => {});
+  const result = await pipeline._singleAgent('原始文本', 0.3, () => {}, 'zh');
 
   assert.equal(result, '润色后的文本');
   assert.equal(calls.length, 1);
@@ -48,4 +47,10 @@ test('empty custom prompt keeps the base system prompt unchanged', () => {
   const prompt = pipeline._withCustomPrompt('基础提示词', 'polish');
 
   assert.equal(prompt, '基础提示词');
+});
+
+test('normalizeModelOutputText removes invisible diff noise from model output', () => {
+  const normalized = normalizeModelOutputText('第一句\u00A0第二句\u200B\r\n第三句');
+
+  assert.equal(normalized, '第一句 第二句\n第三句');
 });

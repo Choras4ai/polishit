@@ -175,24 +175,46 @@ class DiffEngine {
   static _buildChanges(groups) {
     const changes = [];
     let id = 0;
+    let originalOffset = 0;
 
     for (let i = 0; i < groups.length; i++) {
       const g = groups[i];
       if (g.type === 'equal') {
         changes.push({ id: id++, type: 'equal', text: g.text });
+        originalOffset += g.text.length;
       } else if (g.type === 'delete' && i + 1 < groups.length && groups[i + 1].type === 'insert') {
+        const oldText = g.text;
+        const newText = groups[i + 1].text;
         changes.push({
           id: id++,
           type: 'replace',
-          oldText: g.text,
-          newText: groups[i + 1].text,
+          oldText,
+          newText,
+          originalStart: originalOffset,
+          originalEnd: originalOffset + oldText.length,
           status: 'pending',
         });
+        originalOffset += oldText.length;
         i++;
       } else if (g.type === 'delete') {
-        changes.push({ id: id++, type: 'delete', oldText: g.text, status: 'pending' });
+        changes.push({
+          id: id++,
+          type: 'delete',
+          oldText: g.text,
+          originalStart: originalOffset,
+          originalEnd: originalOffset + g.text.length,
+          status: 'pending',
+        });
+        originalOffset += g.text.length;
       } else if (g.type === 'insert') {
-        changes.push({ id: id++, type: 'insert', newText: g.text, status: 'pending' });
+        changes.push({
+          id: id++,
+          type: 'insert',
+          newText: g.text,
+          originalStart: originalOffset,
+          originalEnd: originalOffset,
+          status: 'pending',
+        });
       }
     }
     return changes;

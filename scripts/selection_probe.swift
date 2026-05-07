@@ -9,6 +9,11 @@ struct Bounds: Codable {
   let height: Double
 }
 
+struct SelectionRange: Codable {
+  let location: Int
+  let length: Int
+}
+
 struct Payload: Codable {
   let trusted: Bool
   let frontmostPid: Int32?
@@ -16,9 +21,32 @@ struct Payload: Codable {
   let text: String
   let selectionBounds: Bounds?
   let elementBounds: Bounds?
+  let selectionRange: SelectionRange?
+  let supportsRangeEditing: Bool
 }
 
-func writeJSON(_ payload: Payload) {
+struct SetSelectionRequest: Codable {
+  let bundleIdentifier: String?
+  let frontmostPid: Int32?
+  let expectedText: String?
+  let selectionRange: SelectionRange
+  let targetRange: SelectionRange
+}
+
+struct CommandResult: Codable {
+  let ok: Bool
+  let error: String?
+}
+
+struct SelectionInfo {
+  let text: String
+  let selectionBounds: Bounds?
+  let elementBounds: Bounds?
+  let selectionRange: SelectionRange?
+  let supportsRangeEditing: Bool
+}
+
+func writeJSON<T: Encodable>(_ payload: T) {
   let encoder = JSONEncoder()
   guard let data = try? encoder.encode(payload) else { return }
   FileHandle.standardOutput.write(data)
@@ -29,6 +57,69 @@ func copyAttribute(_ element: AXUIElement, _ attribute: CFString) -> CFTypeRef? 
   let result = AXUIElementCopyAttributeValue(element, attribute, &value)
   guard result == .success else { return nil }
   return value
+}
+
+func rangeValue(_ range: SelectionRange) -> AXValue? {
+  var cfRange = CFRange(location: range.location, length: range.length)
+  return AXValueCreate(.cfRange, &cfRange)
+}
+
+func selectionRange(from ref: CFTypeRef?) -> SelectionRange? {
+  guard
+    let ref,
+    CFGetTypeID(ref) == AXValueGetTypeID()
+  else {
+    return nil
+  }
+
+  let value = unsafeBitCast(ref, to: AXValue.self)
+  var cfRange = CFRange()
+
+  guard
+    AXValueGetType(value) == .cfRange,
+    AXValueGetValue(value, .cfRange, &cfRange),
+    cfRange.location >= 0,
+    cfRange.length >= 0
+  else {
+    return nil
+  }
+
+  return SelectionRange(location: cfRange.location, length: cfRange.length)
+}
+
+func textForRange(_ element: AXUIElement, _ range: SelectionRange) -> String? {
+  guard let parameter = rangeValue(range) else {
+    return nil
+  }
+
+  return copyParameterizedAttribute(
+    element,
+    kAXStringForRangeParameterizedAttribute as CFString,
+    parameter
+  ) as? String
+}
+
+func supportsRangeEditing(_ element: AXUIElement) -> Bool {
+  var settable = DarwinBoolean(false)
+  let result = AXUIElementIsAttributeSettable(
+    element,
+    kAXSelectedTextRangeAttribute as CFString,
+    &settable
+  )
+  return result == .success && settable.boolValue
+}
+
+func setSelectedTextRange(_ element: AXUIElement, _ range: SelectionRange) -> Bool {
+  guard let value = rangeValue(range) else {
+    return false
+  }
+
+  let result = AXUIElementSetAttributeValue(
+    element,
+    kAXSelectedTextRangeAttribute as CFString,
+    value
+  )
+  return result == .success
 }
 
 func copyParameterizedAttribute(
@@ -157,7 +248,7 @@ func windowElement(of appElement: AXUIElement) -> AXUIElement? {
   return unsafeBitCast(windowRef, to: AXUIElement.self)
 }
 
-func selectionFromTextMarkerRange(_ element: AXUIElement) -> (String, Bounds?)? {
+func selectionFromTextMarkerRange(_ element: AXUIElement) -> SelectionInfo? {
   guard
     let markerRangeRef = copyAttribute(element, kAXSelectedTextMarkerRangeAttribute as CFString)
   else {
@@ -174,7 +265,13 @@ func selectionFromTextMarkerRange(_ element: AXUIElement) -> (String, Bounds?)? 
     return nil
   }
 
-  return (text, boundsForTextMarkerRange(element, markerRangeRef))
+  return SelectionInfo(
+    text: text,
+    selectionBounds: boundsForTextMarkerRange(element, markerRangeRef),
+    elementBounds: elementBounds(element),
+    selectionRange: nil,
+    supportsRangeEditing: false
+  )
 }
 
 func childElements(of element: AXUIElement, attribute: CFString) -> [AXUIElement] {
@@ -231,48 +328,45 @@ func descendantCandidates(from root: AXUIElement, maxDepth: Int = 8, maxNodes: I
   return results
 }
 
-func selectedTextAndBounds(from element: AXUIElement) -> (String, Bounds?, Bounds?) {
+func selectedTextAndBounds(from element: AXUIElement) -> SelectionInfo {
   let focusedBounds = elementBounds(element)
   let selectedText = copyAttribute(element, kAXSelectedTextAttribute as CFString) as? String
   let rangeRef = copyAttribute(element, kAXSelectedTextRangeAttribute as CFString)
+  let selectedRange = selectionRange(from: rangeRef)
+  let canEditRange = selectedRange != nil && supportsRangeEditing(element)
 
   if let text = selectedText, !text.isEmpty {
-    if let rangeRef {
-      return (text, boundsForRange(element, rangeRef), focusedBounds)
-    }
-    return (text, nil, focusedBounds)
+    return SelectionInfo(
+      text: text,
+      selectionBounds: rangeRef != nil ? boundsForRange(element, rangeRef!) : nil,
+      elementBounds: focusedBounds,
+      selectionRange: selectedRange,
+      supportsRangeEditing: canEditRange
+    )
   }
 
   if let markerSelection = selectionFromTextMarkerRange(element) {
-    return (markerSelection.0, markerSelection.1, focusedBounds)
+    return markerSelection
   }
 
-  guard
-    let rangeRef,
-    CFGetTypeID(rangeRef) == AXValueGetTypeID()
-  else {
-    return ("", nil, focusedBounds)
+  guard let selectedRange, selectedRange.length > 0 else {
+    return SelectionInfo(
+      text: "",
+      selectionBounds: nil,
+      elementBounds: focusedBounds,
+      selectionRange: nil,
+      supportsRangeEditing: false
+    )
   }
 
-  let rangeValue = unsafeBitCast(rangeRef, to: AXValue.self)
-  var range = CFRange()
-
-  guard
-    AXValueGetType(rangeValue) == .cfRange,
-    AXValueGetValue(rangeValue, .cfRange, &range),
-    range.length > 0
-  else {
-    return ("", nil, focusedBounds)
-  }
-
-  let textRef = copyParameterizedAttribute(
-    element,
-    kAXStringForRangeParameterizedAttribute as CFString,
-    rangeRef
+  let text = textForRange(element, selectedRange) ?? ""
+  return SelectionInfo(
+    text: text,
+    selectionBounds: rangeRef != nil ? boundsForRange(element, rangeRef!) : nil,
+    elementBounds: focusedBounds,
+    selectionRange: selectedRange,
+    supportsRangeEditing: canEditRange
   )
-
-  let text = (textRef as? String) ?? ""
-  return (text, boundsForRange(element, rangeRef), focusedBounds)
 }
 
 func candidateElements(focusedElement: AXUIElement, appElement: AXUIElement) -> [AXUIElement] {
@@ -319,83 +413,198 @@ func candidateElements(focusedElement: AXUIElement, appElement: AXUIElement) -> 
   return elements
 }
 
-let selfPid = Int32(CommandLine.arguments.dropFirst().first ?? "") ?? -1
-let trusted = AXIsProcessTrusted()
-
-guard trusted else {
-  writeJSON(Payload(
-    trusted: false,
-    frontmostPid: nil,
-    bundleIdentifier: nil,
-    text: "",
-    selectionBounds: nil,
-    elementBounds: nil
-  ))
-  exit(0)
+func decodeRequest<T: Decodable>(_ encoded: String, as type: T.Type) -> T? {
+  guard let data = Data(base64Encoded: encoded) else {
+    return nil
+  }
+  return try? JSONDecoder().decode(T.self, from: data)
 }
 
-guard let frontmostApp = NSWorkspace.shared.frontmostApplication else {
-  writeJSON(Payload(
-    trusted: true,
-    frontmostPid: nil,
-    bundleIdentifier: nil,
-    text: "",
-    selectionBounds: nil,
-    elementBounds: nil
-  ))
-  exit(0)
+func resolveFrontmostApp(selfPid: Int32) -> (NSRunningApplication?, Bool) {
+  let trusted = AXIsProcessTrusted()
+  guard trusted else {
+    return (nil, false)
+  }
+  return (NSWorkspace.shared.frontmostApplication, true)
 }
 
-let frontmostPid = frontmostApp.processIdentifier
-if frontmostPid == selfPid {
+func writeProbePayload(selfPid: Int32) {
+  let resolved = resolveFrontmostApp(selfPid: selfPid)
+  guard resolved.1 else {
+    writeJSON(Payload(
+      trusted: false,
+      frontmostPid: nil,
+      bundleIdentifier: nil,
+      text: "",
+      selectionBounds: nil,
+      elementBounds: nil,
+      selectionRange: nil,
+      supportsRangeEditing: false
+    ))
+    exit(0)
+  }
+
+  guard let frontmostApp = resolved.0 else {
+    writeJSON(Payload(
+      trusted: true,
+      frontmostPid: nil,
+      bundleIdentifier: nil,
+      text: "",
+      selectionBounds: nil,
+      elementBounds: nil,
+      selectionRange: nil,
+      supportsRangeEditing: false
+    ))
+    exit(0)
+  }
+
+  let frontmostPid = frontmostApp.processIdentifier
+  if frontmostPid == selfPid {
+    writeJSON(Payload(
+      trusted: true,
+      frontmostPid: frontmostPid,
+      bundleIdentifier: frontmostApp.bundleIdentifier,
+      text: "__SELF__",
+      selectionBounds: nil,
+      elementBounds: nil,
+      selectionRange: nil,
+      supportsRangeEditing: false
+    ))
+    exit(0)
+  }
+
+  let appElement = AXUIElementCreateApplication(frontmostPid)
+  guard
+    let focusedRef = copyAttribute(appElement, kAXFocusedUIElementAttribute as CFString)
+  else {
+    writeJSON(Payload(
+      trusted: true,
+      frontmostPid: frontmostPid,
+      bundleIdentifier: frontmostApp.bundleIdentifier,
+      text: "",
+      selectionBounds: nil,
+      elementBounds: nil,
+      selectionRange: nil,
+      supportsRangeEditing: false
+    ))
+    exit(0)
+  }
+
+  let focusedElement = unsafeBitCast(focusedRef, to: AXUIElement.self)
+  let candidates = candidateElements(focusedElement: focusedElement, appElement: appElement)
+
+  var selectionInfo = SelectionInfo(
+    text: "",
+    selectionBounds: nil,
+    elementBounds: nil,
+    selectionRange: nil,
+    supportsRangeEditing: false
+  )
+
+  for candidate in candidates {
+    let result = selectedTextAndBounds(from: candidate)
+    if !result.text.isEmpty {
+      selectionInfo = result
+      break
+    }
+  }
+
   writeJSON(Payload(
     trusted: true,
     frontmostPid: frontmostPid,
     bundleIdentifier: frontmostApp.bundleIdentifier,
-    text: "__SELF__",
-    selectionBounds: nil,
-    elementBounds: nil
+    text: selectionInfo.text,
+    selectionBounds: selectionInfo.selectionBounds,
+    elementBounds: selectionInfo.elementBounds,
+    selectionRange: selectionInfo.selectionRange,
+    supportsRangeEditing: selectionInfo.supportsRangeEditing
   ))
   exit(0)
 }
 
-let appElement = AXUIElementCreateApplication(frontmostPid)
-guard
-  let focusedRef = copyAttribute(appElement, kAXFocusedUIElementAttribute as CFString)
-else {
-  writeJSON(Payload(
-    trusted: true,
-    frontmostPid: frontmostPid,
-    bundleIdentifier: frontmostApp.bundleIdentifier,
-    text: "",
-    selectionBounds: nil,
-    elementBounds: nil
-  ))
-  exit(0)
-}
+func handleSetSelection(selfPid: Int32, encodedRequest: String?) {
+  let resolved = resolveFrontmostApp(selfPid: selfPid)
+  guard resolved.1 else {
+    writeJSON(CommandResult(ok: false, error: "未授予辅助功能权限。"))
+    exit(0)
+  }
 
-let focusedElement = unsafeBitCast(focusedRef, to: AXUIElement.self)
-let candidates = candidateElements(focusedElement: focusedElement, appElement: appElement)
+  guard
+    let encodedRequest,
+    let request = decodeRequest(encodedRequest, as: SetSelectionRequest.self)
+  else {
+    writeJSON(CommandResult(ok: false, error: "原位修订请求无效。"))
+    exit(0)
+  }
 
-var text = ""
-var selectionBounds: Bounds?
-var elementBoundsValue: Bounds?
+  guard let frontmostApp = resolved.0 else {
+    writeJSON(CommandResult(ok: false, error: "未找到前台应用。"))
+    exit(0)
+  }
 
-for candidate in candidates {
-  let result = selectedTextAndBounds(from: candidate)
-  if !result.0.isEmpty {
-    text = result.0
-    selectionBounds = result.1
-    elementBoundsValue = result.2
+  if let bundleIdentifier = request.bundleIdentifier, !bundleIdentifier.isEmpty,
+     frontmostApp.bundleIdentifier != bundleIdentifier {
+    writeJSON(CommandResult(ok: false, error: "原文窗口已切换，已停止原位修订。"))
+    exit(0)
+  }
+
+  if let expectedPid = request.frontmostPid, expectedPid > 0,
+     frontmostApp.processIdentifier != expectedPid,
+     request.bundleIdentifier == nil || request.bundleIdentifier?.isEmpty == true {
+    writeJSON(CommandResult(ok: false, error: "原文窗口已切换，已停止原位修订。"))
+    exit(0)
+  }
+
+  let appElement = AXUIElementCreateApplication(frontmostApp.processIdentifier)
+  guard
+    let focusedRef = copyAttribute(appElement, kAXFocusedUIElementAttribute as CFString)
+  else {
+    writeJSON(CommandResult(ok: false, error: "未找到可编辑的文本控件。"))
+    exit(0)
+  }
+
+  let focusedElement = unsafeBitCast(focusedRef, to: AXUIElement.self)
+  let candidates = candidateElements(focusedElement: focusedElement, appElement: appElement)
+
+  var targetElement: AXUIElement?
+  for candidate in candidates {
+    guard supportsRangeEditing(candidate) else {
+      continue
+    }
+
+    guard let currentText = textForRange(candidate, request.selectionRange) else {
+      continue
+    }
+
+    if let expectedText = request.expectedText, currentText != expectedText {
+      continue
+    }
+
+    targetElement = candidate
     break
   }
+
+  guard let targetElement else {
+    writeJSON(CommandResult(ok: false, error: "原文内容已经变化，无法安全原位修订。"))
+    exit(0)
+  }
+
+  guard setSelectedTextRange(targetElement, request.targetRange) else {
+    writeJSON(CommandResult(ok: false, error: "当前应用不支持精确设置选区。"))
+    exit(0)
+  }
+
+  writeJSON(CommandResult(ok: true, error: nil))
+  exit(0)
 }
 
-writeJSON(Payload(
-  trusted: true,
-  frontmostPid: frontmostPid,
-  bundleIdentifier: frontmostApp.bundleIdentifier,
-  text: text,
-  selectionBounds: selectionBounds,
-  elementBounds: elementBoundsValue
-))
+let args = Array(CommandLine.arguments.dropFirst())
+let selfPid = Int32(args.first ?? "") ?? -1
+let command = args.count >= 2 ? args[1] : "probe"
+
+switch command {
+case "set-selection":
+  handleSetSelection(selfPid: selfPid, encodedRequest: args.count >= 3 ? args[2] : nil)
+default:
+  writeProbePayload(selfPid: selfPid)
+}

@@ -1,18 +1,25 @@
 # 润石 PoliShit
 
-跨平台（macOS / Windows）中文文本润色桌面应用。选中文字，一键润色 / 降重 / 降AI率（图一乐版），Grammarly 风格逐条审阅。
+跨平台（macOS / Windows）中文文本润色桌面应用。选中文字，一键润色 / 降AIGC，Grammarly 风格逐条审阅。
 
 ## 主要功能
 
-- 选中文字后浮窗自动弹出，点击即触发 `润色`、`降重`、`降AI率（图一乐版）`
-- 全局快捷键触发（默认 `Ctrl+Shift+A` / `⌘⇧A`）
+- 选中文字后浮窗自动弹出，点击即触发 `润色`、`降AIGC`
+- 全局快捷键触发（默认 `Ctrl+Alt+V` / `⌘⌥V`）
 - Grammarly 风格逐条审阅修改建议，按条接受或忽略
-- 内置 Together AI / SiliconFlow 免费预设，也支持 DeepSeek、豆包、Gemini、Claude、OpenAI、Ollama 及自定义接口
+- 支持 Together AI、DeepSeek、豆包、Gemini、Claude、OpenAI、Ollama 及自定义接口
 - 支持自定义提示词，为每种模式添加额外偏好
+- 启动后自动检查 GitHub Releases 新版本，并在「关于」页支持手动检查更新
+
+## 数据路径
+
+- `自配 API`：文本直接发送到你填写的模型服务商。
+- `会员托管`：文本先发送到润石后端，再由后端转发到配置的上游模型。
+- 项目默认不保存历史正文；账户、订单、额度、签到与基础运行日志会按后端需要写入数据库。
 
 ## 下载安装
 
-从 [Releases](https://github.com/nicecho/runshi/releases) 下载对应平台安装包：
+从 [Releases](https://github.com/Choras4ai/polishit/releases) 下载对应平台安装包：
 
 - **macOS**: `润石 PoliShit-x.x.x-arm64.dmg`
 - **Windows**: `润石 PoliShit Setup x.x.x.exe`
@@ -69,10 +76,11 @@ npm run build:all
 - `src/capture.js` — 选中文本捕获与原位粘贴
 - `src/renderer/` — 设置页、结果页、引导页、浮窗 UI
 - `src/ai/` — AI provider 与处理流水线
+- `TECHNICAL_REPORT.md` — 当前版本完整技术报告
 
 ## 作者
 
-**Choras Chan** — [choraschan.github.io](https://choraschan.github.io)
+**陈实之** — [小红书主页](https://www.xiaohongshu.com/user/profile/5baad820f7e8b908db85cf62)
 
 ## 开源协作
 

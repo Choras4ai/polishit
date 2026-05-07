@@ -12,7 +12,9 @@ class WindowManager {
     this.settingsWindow = null;
     this.onboardingWindow = null;
     this.toolbarWindow = null;
+    this.undoWindow = null;
     this._toolbarHideTimer = null;
+    this._undoHideTimer = null;
   }
 
   // ── Floating Toolbar ──
@@ -27,7 +29,7 @@ class WindowManager {
 
     clearTimeout(this._toolbarHideTimer);
 
-    const winW = 340;
+    const winW = 252;
     const winH = 44;
     const anchorRect = this._normalizeAnchorRect(anchor);
     const point = this._anchorToPoint(anchorRect);
@@ -104,6 +106,79 @@ class WindowManager {
     this._toolbarHideTimer = setTimeout(() => this.hideToolbar(), ms);
   }
 
+  showUndoToast() {
+    clearTimeout(this._undoHideTimer);
+
+    const winW = 228;
+    const winH = 64;
+    const point = screen.getCursorScreenPoint();
+    const display = screen.getDisplayNearestPoint(point);
+    const area = display.workArea;
+    const x = area.x + area.width - winW - 18;
+    const y = area.y + area.height - winH - 18;
+
+    if (this.undoWindow && !this.undoWindow.isDestroyed()) {
+      this.undoWindow.setBounds({ x, y, width: winW, height: winH });
+      this.undoWindow.showInactive();
+      this._scheduleUndoToastHide();
+      return;
+    }
+
+    this.undoWindow = new BrowserWindow({
+      width: winW,
+      height: winH,
+      x,
+      y,
+      frame: false,
+      resizable: false,
+      minimizable: false,
+      maximizable: false,
+      movable: false,
+      alwaysOnTop: true,
+      skipTaskbar: true,
+      show: false,
+      transparent: true,
+      hasShadow: true,
+      webPreferences: {
+        preload: path.join(__dirname, '..', 'preload.js'),
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: true,
+      },
+    });
+
+    this.undoWindow.loadFile(
+      path.join(__dirname, 'renderer', 'undo', 'index.html'),
+    );
+
+    this.undoWindow.webContents.once('did-finish-load', () => {
+      if (this.undoWindow && !this.undoWindow.isDestroyed()) {
+        this.undoWindow.showInactive();
+        this._scheduleUndoToastHide();
+      }
+    });
+
+    this.undoWindow.on('closed', () => {
+      this.undoWindow = null;
+      clearTimeout(this._undoHideTimer);
+      this._undoHideTimer = null;
+    });
+  }
+
+  hideUndoToast() {
+    clearTimeout(this._undoHideTimer);
+    this._undoHideTimer = null;
+    if (this.undoWindow && !this.undoWindow.isDestroyed()) {
+      this.undoWindow.close();
+      this.undoWindow = null;
+    }
+  }
+
+  _scheduleUndoToastHide(ms = 15000) {
+    clearTimeout(this._undoHideTimer);
+    this._undoHideTimer = setTimeout(() => this.hideUndoToast(), ms);
+  }
+
   /**
    * Show result panel positioned near the current text selection.
    * @param {Object|null} anchorBounds - {x, y, width, height} of the selection/text area
@@ -173,6 +248,13 @@ class WindowManager {
   sendToResult(channel, data) {
     if (this.resultWindow && !this.resultWindow.isDestroyed()) {
       this.resultWindow.webContents.send(channel, data);
+    }
+  }
+
+  focusResult() {
+    if (this.resultWindow && !this.resultWindow.isDestroyed()) {
+      this.resultWindow.show();
+      this.resultWindow.focus();
     }
   }
 

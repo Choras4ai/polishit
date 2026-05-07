@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>润石 PoliShit - 中文学术写作助手</title>
-  <meta name="description" content="润石 PoliShit 是一款中文写作辅助工具，提供智能润色、降重、降AI率（图一乐版）三大功能。选中即改，原子级修订，无需复制粘贴。">
-  <link rel="icon" type="image/png" href="icon.png">
+  <title>润石 PoliShit - 中文写作辅助工具</title>
+  <meta name="description" content="润石 PoliShit 是一款中文写作辅助工具，提供智能润色与降AIGC两大功能。选中即改，原子级修订，无需复制粘贴。">
+  <link rel="icon" type="image/png" href="logo-64.png?v=3">
   <style>
     :root {
       --primary: #4A7C6B;
@@ -272,7 +272,7 @@
     .adv-card p { font-size: 13px; color: var(--fg2); line-height: 1.7; }
 
     /* ── Features ── */
-    .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+    .features-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; max-width: 760px; margin: 0 auto; }
     .feature-card {
       background: var(--card-bg); border: 1px solid var(--border);
       border-radius: var(--radius); padding: 32px; transition: all 0.3s;
@@ -348,9 +348,120 @@
     @media (max-width: 768px) {
       .hero h1 { font-size: 32px; }
       .features-grid, .advantages-grid { grid-template-columns: 1fr; }
+      .features-grid { max-width: 100%; }
+      .features-grid { max-width: 100%; }
       .compare-grid { grid-template-columns: 1fr; }
       .steps { flex-direction: column; align-items: center; }
       .nav-links { display: none; }
+    }
+
+    /* ── Membership ── */
+    .membership-section { padding: 80px 24px; background: linear-gradient(135deg, #f0faf5 0%, #e8f0fe 100%); }
+    .membership-inner { max-width: 900px; margin: 0 auto; }
+    .membership-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 48px; }
+    .plan-card {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 36px; text-align: center; transition: all 0.4s cubic-bezier(0.22,1,0.36,1);
+    }
+    .plan-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.08); }
+    .plan-card.featured {
+      border-color: var(--primary); position: relative;
+      box-shadow: 0 8px 30px rgba(74,124,107,0.15);
+    }
+    .plan-card.featured::before {
+      content: '⭐ 推荐'; position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+      background: var(--primary); color: #fff; font-size: 12px; font-weight: 600;
+      padding: 4px 16px; border-radius: 12px;
+    }
+    .plan-card h3 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+    .plan-price { font-size: 42px; font-weight: 800; color: var(--primary); margin: 16px 0 4px; }
+    .plan-price span { font-size: 16px; font-weight: 500; color: var(--fg2); }
+    .plan-desc { font-size: 14px; color: var(--fg2); margin-bottom: 20px; }
+    .plan-features { list-style: none; text-align: left; margin-bottom: 24px; }
+    .plan-features li {
+      font-size: 14px; padding: 6px 0; color: var(--fg2);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .plan-features li::before { content: '✓'; color: var(--primary); font-weight: 700; }
+    .plan-note { text-align: center; margin-top: 20px; font-size: 13px; color: var(--fg3); }
+    @media (max-width: 768px) { .membership-grid { grid-template-columns: 1fr; } }
+
+    /* ── Scroll Reveal Animations ── */
+    .scroll-reveal {
+      opacity: 0;
+      transform: translateY(32px);
+      transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1), transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .scroll-reveal.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .scroll-reveal-left {
+      opacity: 0;
+      transform: translateX(-40px);
+      transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1), transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .scroll-reveal-left.is-visible {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    .scroll-reveal-right {
+      opacity: 0;
+      transform: translateX(40px);
+      transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1), transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .scroll-reveal-right.is-visible {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    .scroll-reveal-scale {
+      opacity: 0;
+      transform: scale(0.92);
+      transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1), transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .scroll-reveal-scale.is-visible {
+      opacity: 1;
+      transform: scale(1);
+    }
+    /* stagger children */
+    .stagger-children > * { transition-delay: calc(var(--i, 0) * 0.12s); }
+
+    /* hero entrance */
+    .hero-badge { animation: heroFadeUp 0.8s 0.1s both; }
+    .hero h1 { animation: heroFadeUp 0.8s 0.25s both; }
+    .hero-slogan { animation: heroFadeUp 0.8s 0.4s both; }
+    .hero > p { animation: heroFadeUp 0.8s 0.55s both; }
+    .hero-actions { animation: heroFadeUp 0.8s 0.7s both; }
+    @keyframes heroFadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* nav show on scroll */
+    nav { transition: transform 0.3s, box-shadow 0.3s; }
+    nav.nav-scrolled { box-shadow: 0 2px 20px rgba(0,0,0,0.06); }
+
+    /* provider pills bounce */
+    .provider-badge {
+      transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .provider-badge:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+
+    /* feature card hover glow */
+    .feature-card {
+      transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    /* download card float */
+    .download-card {
+      transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .download-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.1);
     }
   </style>
 </head>
@@ -359,23 +470,22 @@
 <nav>
   <div class="nav-inner">
     <a class="nav-logo" href="#">
-      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-        <rect width="28" height="28" rx="6" fill="#4A7C6B"/>
-        <text x="14" y="20" text-anchor="middle" font-size="16" font-weight="bold" fill="white" font-family="PingFang SC, sans-serif">润</text>
-      </svg>
+      <img src="logo-64.png?v=3" alt="润石" width="32" height="32" style="border-radius:7px;">
       润石 PoliShit
     </a>
     <div class="nav-links">
       <a href="#compare">为什么选润石 PoliShit</a>
       <a href="#features">功能</a>
+      <a href="#membership">积分</a>
       <a href="#download">下载</a>
-      <a href="https://github.com/nicecho/runshi" target="_blank">GitHub</a>
+      <a href="https://github.com/Choras4ai/polishit" target="_blank">GitHub</a>
     </div>
   </div>
 </nav>
 
 <!-- ═══════════ HERO ═══════════ -->
 <section class="hero">
+  <img src="logo-256.png?v=3" alt="润石" width="120" height="120" style="display:block;margin:0 auto 24px;border-radius:26px;box-shadow:0 8px 30px rgba(74,124,107,0.18);animation:heroFadeUp 0.8s 0.05s both;">
   <div class="hero-badge">面向中文论文写作 · 跨平台 · 开箱即用</div>
   <h1>润石 PoliShit</h1>
   <p class="hero-slogan">润色构石，构石虽糙，一润成文。</p>
@@ -385,7 +495,7 @@
       <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 12l-4-4h2.5V2h3v6H12L8 12zm-6 2h12v1.5H2V14z"/></svg>
       免费下载
     </a>
-    <a class="btn btn-secondary" href="https://github.com/nicecho/runshi" target="_blank">
+    <a class="btn btn-secondary" href="https://github.com/Choras4ai/polishit" target="_blank">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
       查看源码
     </a>
@@ -428,8 +538,7 @@
         <div style="margin-top:8px">
           <div class="mock-toolbar">
             <span class="tb active">✦ 润色</span>
-            <span class="tb">⇅ 降重</span>
-            <span class="tb">👤 降AI率（图一乐版）</span>
+            <span class="tb">👤 降AIGC</span>
           </div>
         </div>
       </div>
@@ -458,71 +567,65 @@
 
 <!-- ═══════════ CORE ADVANTAGES ═══════════ -->
 <section class="section">
-  <h2 class="section-title">核心优势</h2>
-  <p class="section-subtitle">和 AI 对话框、在线润色网站相比，润石 PoliShit 有本质区别</p>
+  <h2 class="section-title scroll-reveal">核心优势</h2>
+  <p class="section-subtitle scroll-reveal">和 AI 对话框、在线润色网站相比，润石 PoliShit 有本质区别</p>
 
-  <div class="advantages-grid">
-    <div class="adv-card">
+  <div class="advantages-grid stagger-children">
+    <div class="adv-card scroll-reveal" style="--i:0">
       <div class="adv-icon">🔬</div>
       <h3>原子级修订，而非整段重写</h3>
       <p>传统方式 AI 会返回一整段改写结果，你无法知道哪些词被改了、改得对不对。润石 PoliShit 精确标注每一处修改，附带理由和替代方案，你可以<strong>逐条接受或忽略</strong>。</p>
     </div>
-    <div class="adv-card">
+    <div class="adv-card scroll-reveal" style="--i:1">
       <div class="adv-icon">⚡</div>
       <h3>选中即改，零切换成本</h3>
       <p>在任何应用中选中文字，浮窗工具栏自动弹出。一键处理，结果悬浮呈现。不用切窗口、不用复制粘贴、不用写 prompt，<strong>所见即所改</strong>。</p>
     </div>
-    <div class="adv-card">
+    <div class="adv-card scroll-reveal" style="--i:2">
       <div class="adv-icon">🔌</div>
       <h3>无限 API 额度，自由切换模型</h3>
-      <p>内置 2 个免费 API（Together AI + 硅基流动），还支持 DeepSeek、豆包、Gemini、Claude、OpenAI、Ollama 等。<strong>用自己的 Key，额度上限由你决定</strong>。</p>
+      <p>支持 Together AI、DeepSeek、豆包、Gemini、Claude、OpenAI、Ollama 等主流服务商。<strong>用自己的 Key，额度上限由你决定</strong>。</p>
     </div>
   </div>
 </section>
 
 <!-- ═══════════ THREE FEATURES ═══════════ -->
 <section class="section" id="features">
-  <h2 class="section-title">三大功能</h2>
-  <p class="section-subtitle">润色 · 降重 · 降AI率（图一乐版），中文写作全流程辅助</p>
+  <h2 class="section-title scroll-reveal">两大功能</h2>
+  <p class="section-subtitle scroll-reveal">润色 · 降AIGC，中文写作全流程辅助</p>
 
   <div class="features-grid">
-    <div class="feature-card">
+    <div class="feature-card scroll-reveal-left">
       <div class="feature-icon polish">✦</div>
       <h3>AI 润色</h3>
       <p>资深编辑级别的润色能力。自动识别文体（学术/公文/文学），从语法、标点、用词、逻辑、风格、节奏六个维度全面提升，遵循"宁可漏改，不可错改"原则。</p>
       <span class="feature-tag cnki">符合 GB/T 15834</span>
     </div>
-    <div class="feature-card">
-      <div class="feature-icon dedup">⇅</div>
-      <h3>降重</h3>
-      <p>面向查重场景改写文本表达方式，综合运用同义替换、句式变换、语序调整、概括转述等多种策略，帮助你在保留原意的前提下完成降重。</p>
-      <span class="feature-tag cnki">多策略降重</span>
-    </div>
-    <div class="feature-card">
+    <div class="feature-card scroll-reveal-right">
       <div class="feature-icon deai">👤</div>
-      <h3>降AI率（图一乐版）</h3>
-      <p>调整文本的写作风格，使表达更自然、更有个人痕迹。通过句式参差、个性化衔接和细节修饰等方法，做一个图一乐版的降AI率处理。</p>
-      <span class="feature-tag new">v1.4 新功能</span>
+      <h3>降AIGC</h3>
+      <p>调整文本的写作风格，使表达更自然、更有个人痕迹。通过句式参差、个性化衔接和细节修饰等方法，让文字更接近自然写作状态。</p>
+      <span class="feature-tag new">v1.6.1 已更新</span>
     </div>
   </div>
 </section>
 
 <!-- ═══════════ HOW IT WORKS ═══════════ -->
 <section class="section">
-  <h2 class="section-title">三步搞定</h2>
-  <p class="section-subtitle">无需复杂配置，开箱即用</p>
-  <div class="steps">
-    <div class="step">
+  <h2 class="section-title scroll-reveal">三步搞定</h2>
+  <p class="section-subtitle scroll-reveal">无需复杂配置，开箱即用</p>
+  <div class="steps stagger-children">
+    <div class="step scroll-reveal" style="--i:0">
       <div class="step-num">1</div>
       <h4>选中文字</h4>
       <p>在任意应用中选中需要处理的中文文本，浮窗工具栏自动出现</p>
     </div>
-    <div class="step">
+    <div class="step scroll-reveal" style="--i:1">
       <div class="step-num">2</div>
       <h4>一键处理</h4>
-      <p>点击「润色」「降重」或「降AI率（图一乐版）」，AI 即刻在原文上分析</p>
+      <p>点击「润色」或「降AIGC」，AI 即刻在原文上分析</p>
     </div>
-    <div class="step">
+    <div class="step scroll-reveal" style="--i:2">
       <div class="step-num">3</div>
       <h4>逐条审阅</h4>
       <p>每处修改标注原因和替代方案，一键接受或忽略，完整修改稿一键复制</p>
@@ -532,11 +635,10 @@
 
 <!-- ═══════════ AI PROVIDERS ═══════════ -->
 <section class="section">
-  <h2 class="section-title">灵活的 AI 后端</h2>
-  <p class="section-subtitle">2 个内置免费 API + 6 种主流服务商 + 本地模型，额度无上限</p>
-  <div class="providers">
-    <span class="provider-badge free">Together AI（内置免费）</span>
-    <span class="provider-badge free">硅基流动（内置免费）</span>
+  <h2 class="section-title scroll-reveal">灵活的 AI 后端</h2>
+  <p class="section-subtitle scroll-reveal">7 种主流服务商 + 本地模型 + 自定义接口，额度无上限</p>
+  <div class="providers scroll-reveal-scale">
+    <span class="provider-badge">Together AI</span>
     <span class="provider-badge">DeepSeek</span>
     <span class="provider-badge">豆包</span>
     <span class="provider-badge">Google Gemini</span>
@@ -545,27 +647,64 @@
     <span class="provider-badge">Ollama 本地</span>
     <span class="provider-badge">自定义 API</span>
   </div>
-  <p class="provider-note">* 硅基流动免费模型能力较弱，建议自行选用最新付费模型的 API 获得最佳效果</p>
+  <p class="provider-note">* 自配 API 适合高级用户；不想配置时可以登录后使用积分模式。</p>
+</section>
+
+<!-- ═══════════ MEMBERSHIP ═══════════ -->
+<section class="membership-section" id="membership">
+  <div class="membership-inner">
+    <h2 class="section-title scroll-reveal">不想配置 API？用积分模式</h2>
+    <p class="section-subtitle scroll-reveal">一杯咖啡的价格，零配置上手，自动调用最新 AI 模型</p>
+    <div class="membership-grid">
+      <div class="plan-card scroll-reveal-left">
+        <h3>免费体验</h3>
+        <div class="plan-price">¥0 <span>/ 10 次试用</span></div>
+        <p class="plan-desc">注册即送 10 次托管模型试用</p>
+        <ul class="plan-features">
+          <li>注册即得 10 次免费试用</li>
+          <li>默认再赠 5 基础积分</li>
+          <li>支持自配 9 种服务商 API</li>
+          <li>润色 + 降AIGC 全功能</li>
+          <li>适合先体验再决定</li>
+        </ul>
+        <a class="btn btn-secondary" href="#download" style="width:100%;justify-content:center;">免费下载</a>
+      </div>
+      <div class="plan-card featured scroll-reveal-right">
+        <h3>积分版 ☕</h3>
+        <div class="plan-price">¥9.9 <span>/ 300 积分</span></div>
+        <p class="plan-desc">一杯咖啡的价格，约 300 次基础润色</p>
+        <ul class="plan-features">
+          <li>5 款最新旗舰模型自由切换</li>
+          <li>DeepSeek · Kimi · Qwen · GLM</li>
+          <li>不限时长，用完再充</li>
+          <li>润色 + 降AIGC 全功能</li>
+          <li>无需配置，开箱即用</li>
+        </ul>
+        <a class="btn btn-primary" href="#download" style="width:100%;justify-content:center;">下载后应用内充值</a>
+      </div>
+    </div>
+    <p class="plan-note">💡 标准计费约 800 字 / 1 基础积分，不同模型会按倍率消耗。</p>
+  </div>
 </section>
 
 <!-- ═══════════ DOWNLOAD ═══════════ -->
 <section class="download-section" id="download">
-  <h2 class="section-title">立即下载</h2>
-  <p class="section-subtitle">免费使用，无需注册</p>
-  <div class="download-card">
+  <h2 class="section-title scroll-reveal">立即下载</h2>
+  <p class="section-subtitle scroll-reveal">注册送 10 次免费试用，¥9.9 解锁 300 基础积分</p>
+  <div class="download-card scroll-reveal-scale">
     <h3>润石 PoliShit for macOS</h3>
-    <p class="version">v1.5.0 · Apple Silicon (arm64)</p>
-    <a class="btn btn-primary" href="https://github.com/nicecho/runshi/releases/latest/download/%E6%B6%A6%E7%9F%B3%20PoliShit-1.5.0-arm64.dmg" style="width:100%;justify-content:center;">
+    <p class="version">v1.6.1 · Apple Silicon (arm64)</p>
+    <a class="btn btn-primary" href="https://github.com/Choras4ai/polishit/releases/download/v1.6.1/runshi-polis-1.6.1-arm64.dmg" style="width:100%;justify-content:center;">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 12l-4-4h2.5V2h3v6H12L8 12zm-6 2h12v1.5H2V14z"/></svg>
       下载 macOS .dmg
     </a>
     <p class="sys-req">系统要求：macOS 12.0+</p>
     <p class="sys-req" style="color:#d93025;font-weight:500;margin-top:6px">⚠ 首次打开被拦截？<b>右键应用 → 打开 → 再点「打开」</b>即可。若仍提示「已损坏」，终端执行：<code style="background:#fce8e6;padding:2px 6px;border-radius:4px;font-size:11px">xattr -cr /Applications/润石\ PoliShit.app</code></p>
   </div>
-  <div class="download-card" style="margin-top: 20px;">
+  <div class="download-card scroll-reveal-scale" style="margin-top: 20px;">
     <h3>润石 PoliShit for Windows</h3>
-    <p class="version">v1.5.0 · 64位</p>
-    <a class="btn btn-primary" href="https://github.com/nicecho/runshi/releases/latest/download/%E6%B6%A6%E7%9F%B3%20PoliShit%20Setup%201.5.0.exe" style="width:100%;justify-content:center;background:#2563eb;box-shadow:0 4px 14px rgba(37,99,235,0.35);">
+    <p class="version">v1.6.1 · 64位</p>
+    <a class="btn btn-primary" href="https://github.com/Choras4ai/polishit/releases/download/v1.6.1/runshi-polis-setup-1.6.1.exe" style="width:100%;justify-content:center;background:#2563eb;box-shadow:0 4px 14px rgba(37,99,235,0.35);">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 12l-4-4h2.5V2h3v6H12L8 12zm-6 2h12v1.5H2V14z"/></svg>
       下载 Windows 安装包
     </a>
@@ -574,8 +713,28 @@
 </section>
 
 <footer>
-  <p>润石 PoliShit © 2025 · <a href="https://github.com/nicecho/runshi" target="_blank">GitHub</a> · <a href="terms.html">用户协议</a> · 润色构石，构石虽糙，一润成文</p>
+  <p>润石 PoliShit © 2026 · <a href="https://github.com/Choras4ai/polishit" target="_blank">GitHub</a> · <a href="technical-report.html">技术报告</a> · <a href="terms.html">用户协议</a> · 润色构石，构石虽糙，一润成文</p>
 </footer>
+
+<script>
+// Scroll reveal
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('is-visible');
+      observer.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+
+document.querySelectorAll('.scroll-reveal, .scroll-reveal-left, .scroll-reveal-right, .scroll-reveal-scale').forEach(el => observer.observe(el));
+
+// Nav shadow on scroll
+const nav = document.querySelector('nav');
+window.addEventListener('scroll', () => {
+  nav.classList.toggle('nav-scrolled', window.scrollY > 20);
+}, { passive: true });
+</script>
 
 </body>
 </html>
