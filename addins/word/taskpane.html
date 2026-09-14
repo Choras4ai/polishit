@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://appsforoffice.microsoft.com; connect-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self' https://appsforoffice.microsoft.com; object-src 'none'; frame-ancestors 'self'">
+  <title>润石文档助手</title>
+  <link rel="stylesheet" href="taskpane.css">
+  <link rel="stylesheet" href="taskpane-layout.css">
+</head>
+<body>
+  <main class="shell">
+    <div class="brand"><span class="mark">润</span><div><strong>润石文档助手</strong><small id="hostName">正在连接编辑器…</small></div></div>
+    <section class="card login" id="loginView" hidden>
+      <p class="eyebrow">账号登录</p><h1>在文档里直接润色</h1>
+      <p class="muted">使用润石账号登录，会员积分和桌面版共用。</p>
+      <form id="loginForm"><label>邮箱<input name="email" type="email" autocomplete="username" required></label><label>密码<input name="password" type="password" autocomplete="current-password" minlength="6" required></label><button class="primary" type="submit">登录润石</button><p class="message" id="loginMessage" role="status"></p></form>
+      <p class="muted account-help">还没有账号或忘记密码？请先打开<a href="https://www.runshi.top/#download" target="_blank" rel="noopener">润石桌面版</a>完成账号操作。</p>
+    </section>
+    <section id="appView" hidden>
+      <div class="accountbar"><span><span id="accountName">已登录</span><small id="accountBalance"></small></span><button class="text-button" id="logoutButton" type="button">退出</button></div>
+      <section class="card">
+        <p class="eyebrow">当前选区</p><h2>选择一段文字开始</h2>
+        <div class="selection-preview" id="selectionPreview">请先在文档中选中文字</div>
+        <div class="controls"><select id="taskMode" aria-label="处理方式"><option value="polish">严谨润色</option><option value="deai">自然化表达</option></select><button class="primary" id="analyzeButton" type="button">分析所选文字</button></div>
+        <p class="review-note" id="reviewCapability"><strong>正在检测原文批阅能力</strong><span>检测完成后会显示当前编辑器支持的写回方式。</span></p>
+        <p class="privacy">只发送你主动选中的文字；不会自动上传整篇文档。应用前会再次核对原文，避免覆盖你刚做的修改。</p>
+        <p class="status" id="statusMessage" role="status" aria-live="polite"></p>
+      </section>
+      <section class="suggestions" id="suggestions"></section>
+      <div class="actionbar" id="actionbar" hidden><button id="acceptAllButton" type="button">全部接受</button><button class="apply" id="applyButton" type="button">写入原文修订</button></div>
+    </section>
+  </main>
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script><script src="diff.js"></script><script src="adapter.js"></script><script src="taskpane.js"></script>
+</body>
+</html>

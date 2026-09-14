@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<JsPlugin>
+  <ApiVersion>1.0.0</ApiVersion>
+  <Name>润石文档助手</Name>
+  <Description>在 WPS 文字中安全读取选中文字，逐条确认润色建议并写回文档。</Description>
+</JsPlugin>

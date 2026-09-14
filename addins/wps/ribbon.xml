@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<customUI xmlns="http://schemas.microsoft.com/office/2009/07/customui" onLoad="OnAddinLoad">
+  <ribbon>
+    <tabs>
+      <tab id="runshiTab" label="润石">
+        <group id="runshiGroup" label="智能写作">
+          <button id="runshiOpenPane" label="润色选区" size="large" onAction="OpenRunShiTaskPane" getImage="GetImage" screentip="润石文档助手" supertip="读取当前选中文字，生成可逐条接受的润色建议。" />
+        </group>
+      </tab>
+    </tabs>
+  </ribbon>
+</customUI>

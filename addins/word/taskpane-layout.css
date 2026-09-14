@@ -1,0 +1,38 @@
+.accountbar > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.accountbar small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.account-help {
+  margin-top: 14px;
+}
+
+.account-help a {
+  color: var(--green);
+  font-weight: 700;
+}
+
+.review-note {
+  display: grid;
+  gap: 4px;
+  margin: 12px 0 0;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.review-note strong {
+  color: var(--ink);
+  font-size: 12px;
+}

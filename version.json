@@ -1,0 +1,19 @@
+{
+  "version": "1.6.7",
+  "name": "润石 PoliShit 1.6.7",
+  "publishedAt": "2026-08-03T00:00:00.000Z",
+  "notes": "会员中心重新设计：账户、积分和每日签到整合为轻量控制台，突出余额和积分包入口；通用润色模型采用紧凑双栏布局，并支持键盘操作与清晰焦点提示。每日签到仍为每个北京时间自然日 1 积分。macOS 与 Windows 均支持软件内自动下载、校验和安装。",
+  "pageUrl": "https://www.runshi.top/#download",
+  "downloads": {
+    "darwin-arm64": "https://www.runshi.top/downloads/runshi-polis-1.6.7-arm64.dmg",
+    "win32-x64": "https://www.runshi.top/downloads/runshi-polis-setup-1.6.7.exe"
+  },
+  "sha256": {
+    "darwin-arm64": "97ff15f048089797434d960cd8c51f361fb7d9f808c6b5a207dd7e5c6966dc88",
+    "win32-x64": "dee59adcdf45895210ac5df4a57ef6086d4610b89f0427cf16a0f10ca885c75d"
+  },
+  "sizes": {
+    "darwin-arm64": 110801258,
+    "win32-x64": 89043343
+  }
+}

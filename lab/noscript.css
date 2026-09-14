@@ -1,0 +1,4 @@
+.loader,#spaceCanvas{display:none!important}
+body{background:radial-gradient(ellipse at 62% 38%,#0a2118,#020806 68%)!important}
+.river-journey{height:100vh!important;height:100svh!important;background-image:radial-gradient(circle at 62% 18%,rgba(207,255,233,.85) 0 1px,transparent 2px),radial-gradient(circle at 76% 44%,rgba(119,211,172,.7) 0 1px,transparent 2px),radial-gradient(circle at 44% 66%,rgba(221,255,240,.72) 0 1px,transparent 2px);background-size:93px 91px,141px 137px,67px 73px}
+.loader{display:none!important}
