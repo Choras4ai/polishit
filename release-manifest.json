@@ -1,0 +1,18 @@
+{
+  "version": "1.6.3",
+  "archiveDate": "2026-10-07",
+  "provenance": "Preserved local release installers; not rebuilt during this archive operation.",
+  "sourceSnapshotAvailable": false,
+  "artifacts": [
+    {
+      "name": "runshi-polis-1.6.3-arm64.dmg",
+      "size": 110779498,
+      "sha256": "6cc84ffb25510b9512d03baaf115495fc7baacc25dcb62cac1ce69db11e5fe4d"
+    },
+    {
+      "name": "runshi-polis-setup-1.6.3.exe",
+      "size": 89042074,
+      "sha256": "1f5d6300ed2b70420eedc491258d46fc11e5089c7290eb50fcbc63546cec0944"
+    }
+  ]
+}
