@@ -1,6 +1,6 @@
 {
   "name": "runshi",
-  "version": "1.6.1",
+  "version": "1.6.11",
   "description": "润石 PoliShit - 润色构石，构石虽糙，一润成文",
   "homepage": "https://www.runshi.top",
   "repository": {
@@ -21,27 +21,57 @@
     "server:install": "npm --prefix server install",
     "server:start": "npm --prefix server start",
     "server:dev": "npm --prefix server run dev",
+    "payment:check": "npm --prefix server run payment:check",
+    "payment:probe": "npm --prefix server run payment:probe",
     "test": "node --test",
-    "build": "electron-builder",
-    "build:mac": "electron-builder --mac",
-    "build:win": "electron-builder --win",
-    "build:all": "electron-builder --mac --win"
+    "build": "node scripts/build-with-server-deps.js",
+    "build:mac": "node scripts/build-with-server-deps.js mac",
+    "build:win": "node scripts/build-with-server-deps.js win",
+    "build:all": "node scripts/build-with-server-deps.js all",
+    "build:native": "node scripts/build-native.js",
+    "build:addins": "node scripts/build-addins.js",
+    "build:site": "bash scripts/build-site-dist.sh",
+    "test:ui": "npm run build:site && node scripts/run-electron-smoke.js",
+    "test:app": "node scripts/run-electron-smoke.js smoke-main.js",
+    "test:lab": "node scripts/run-electron-smoke.js smoke-lab.js"
   },
   "dependencies": {
+    "dotenv": "^17.4.2",
     "electron-store": "^8.1.0"
   },
   "devDependencies": {
-    "electron": "^28.0.0",
-    "electron-builder": "^24.0.0"
+    "electron": "42.11.2",
+    "electron-builder": "26.15.3",
+    "node-gyp": "11.5.0"
   },
   "build": {
     "appId": "com.runshi.app",
+    "toolsets": {
+      "nsis": "1.2.1"
+    },
+    "npmRebuild": false,
     "productName": "润石 PoliShit",
     "afterPack": "./scripts/afterPack.js",
     "extraResources": [
       {
         "from": "server",
         "to": "server",
+        "filter": [
+          "**/*",
+          "!keys{,/**/*}",
+          "!.env",
+          "!.env.*",
+          "!**/*.pem",
+          "!**/*.p12",
+          "!**/*.pfx",
+          "!data{,/**/*}",
+          "!**/*.sqlite*",
+          "!**/*.db"
+        ]
+      },
+      {
+        "from": "server/node_modules",
+        "to": "server/node_modules",
         "filter": [
           "**/*"
         ]
@@ -54,7 +84,11 @@
       ],
       "artifactName": "润石 PoliShit-${version}-${arch}.${ext}",
       "darkModeSupport": true,
-      "icon": "assets/icon.icns"
+      "icon": "assets/icon.icns",
+      "sign": "./scripts/sign.js",
+      "identity": "-",
+      "hardenedRuntime": false,
+      "minimumSystemVersion": "12.0.0"
     },
     "win": {
       "artifactName": "润石 PoliShit Setup ${version}.${ext}",
@@ -81,7 +115,17 @@
       "preload.js",
       "src/**/*",
       "scripts/selection_probe.swift",
-      "assets/**/*"
+      "scripts/windows_review.ps1",
+      "assets/**/*",
+      "native/bin/*.node"
+    ],
+    "asarUnpack": [
+      "native/bin/*.node",
+      "scripts/windows_review.ps1"
     ]
-  }
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "gypfile": false
 }

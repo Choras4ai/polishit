@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#020a07">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="Eridanus AI NEO LAB 波江座人工智能实验室：循语言、数据与人的微弱信号，探索理解的边界。">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <link rel="canonical" href="https://www.runshi.top/lab/">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Eridanus AI NEO LAB">
+  <meta property="og:title" content="Eridanus AI NEO LAB · The River">
+  <meta property="og:description" content="波江座人工智能实验室。循语言、数据与人的微弱信号，探索理解的边界。">
+  <meta property="og:url" content="https://www.runshi.top/lab/">
+  <meta property="og:image" content="https://www.runshi.top/lab/og-eridanus.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Eridanus AI NEO LAB · The River">
+  <meta name="twitter:description" content="波江座人工智能实验室。循语言、数据与人的微弱信号，探索理解的边界。">
+  <meta name="twitter:image" content="https://www.runshi.top/lab/og-eridanus.jpg">
+  <title>Eridanus AI NEO LAB · 波江座人工智能实验室</title>
+  <link rel="icon" href="../logo-64.png" type="image/png">
+  <link rel="stylesheet" href="lab.css?v=20260913-brand1">
+  <noscript><link rel="stylesheet" href="noscript.css"></noscript>
+</head>
+<body>
+  <a class="skip-link" href="#lab-manifesto">跳至实验室简介</a>
+  <div class="loader" id="labLoader" role="status" aria-live="polite">
+    <div class="loader-mark" aria-hidden="true"><i></i><i></i><i></i></div>
+    <p class="loader-label" id="loaderLabel">RESOLVING ERIDANUS</p>
+    <progress id="loaderProgress" max="100" value="12" aria-labelledby="loaderLabel">12%</progress>
+  </div>
+  <canvas id="spaceCanvas" role="img" aria-describedby="river-title" aria-label="波江座交互式星图，从 Cursa 沿星河延伸至 Achernar"></canvas>
+  <div class="space-vignette" aria-hidden="true"></div>
+  <div class="space-grain" aria-hidden="true"></div>
+  <header class="lab-header">
+    <button class="lab-wordmark" id="brandMotionToggle" type="button" aria-pressed="false" aria-label="暂停或播放 Eridanus AI 动态标志">
+      <svg class="lab-mark" viewBox="0 0 512 512" role="img" aria-label="Eridanus AI 星隙动态标志">
+        <rect class="lab-mark-field" x="64" y="64" width="384" height="384" rx="28"></rect>
+        <g class="lab-mark-icon">
+          <path transform="rotate(0 256 256)" d="M124 80H234C234 151 224 191 190 218C159 242 115 250 80 246V124C80 99.7 99.7 80 124 80Z"></path>
+          <path transform="rotate(90 256 256)" d="M124 80H234C234 151 224 191 190 218C159 242 115 250 80 246V124C80 99.7 99.7 80 124 80Z"></path>
+          <path transform="rotate(180 256 256)" d="M124 80H234C234 151 224 191 190 218C159 242 115 250 80 246V124C80 99.7 99.7 80 124 80Z"></path>
+          <path transform="rotate(270 256 256)" d="M124 80H234C234 151 224 191 190 218C159 242 115 250 80 246V124C80 99.7 99.7 80 124 80Z"></path>
+        </g>
+      </svg>
+      <span>ERIDANUS AI</span><small>NEO LAB</small>
+    </button>
+  </header>
+  <main>
+    <section class="river-journey" id="riverJourney" aria-labelledby="river-title">
+      <div class="river-sticky">
+        <div class="sky-controls" id="skyControls" aria-hidden="true" hidden>
+          <select id="starSelect"><option value=""></option></select><button id="motionToggle" type="button" aria-pressed="false" hidden></button>
+          <output id="starDetails"></output>
+          <p id="skyStatus">正在加载星图</p>
+        </div>
+        <div class="river-copy">
+          <p class="eyebrow">ERIDANUS · THE RIVER · 波江之河</p>
+          <h1 id="river-title"><span>让星河</span><span>成为坐标</span></h1>
+          <p>从 Cursa 到 Achernar，恒星沿天球上的真实位置连成一条通往南天的河。</p>
+        </div>
+        <div class="star-label" id="starLabel" aria-hidden="true" hidden><strong id="starLabelName"></strong><span id="starLabelMeta"></span></div>
+        <div class="river-caption" aria-hidden="true"><span>CURSA</span><i></i><span>ACHERNAR</span></div>
+        <p class="scroll-cue">沿星河向下探索 · SCROLL TO TRACE THE RIVER <span aria-hidden="true">↓</span></p>
+      </div>
+    </section>
+    <section class="arrival" aria-labelledby="arrival-title">
+      <div class="arrival-lockup">
+        <p class="eyebrow">SIGNAL ACQUIRED · ACHERNAR · 信号已抵达水委一</p>
+        <h2 id="arrival-title">Eridanus AI<br>NEO LAB</h2>
+        <p class="arrival-subtitle">波江座人工智能实验室</p>
+        <p class="arrival-line">循语言、数据与人的微弱信号，驶向理解的深空</p>
+        <a class="lab-cta" href="#lab-manifesto">读取实验室信号 <span aria-hidden="true">↓</span></a>
+      </div>
+    </section>
+    <section class="manifesto" id="lab-manifesto" aria-labelledby="manifesto-title">
+      <div class="manifesto-orbit" aria-hidden="true"></div>
+      <div class="manifesto-heading"><p class="eyebrow">INDEPENDENT RESEARCH CELL · ERIDANUS<br>波江座 · 独立研究单元</p><h2 id="manifesto-title">波江座人工智能</h2></div>
+      <div class="manifesto-copy">
+        <p class="manifesto-lead">我们关注语言、数据与心智之间尚未被充分理解的连接。</p>
+        <div class="manifesto-detail"><p>以人工智能为基础，我们探索知识的表达、数据背后的规律，以及技术如何进入更复杂的人类认知、情绪与关系之中。</p><p>我们相信，智能的意义不止于效率，而在于让复杂变得可理解，让隐藏的结构被看见，让技术逐渐靠近真实的人。</p></div>
+      </div>
+      <div class="vectors" aria-label="研究方向">
+        <article><span>01</span><h3>语言与意义<small lang="en">Language &amp; Meaning</small></h3><p>在字句与本意之间校准信号。以语言智能、写作工具与表达服务，让思想保有自己的轮廓。</p></article>
+        <article><span>02</span><h3>数据与发现<small lang="en">Data &amp; Discovery</small></h3><p>从离散观测中辨认结构。以数据分析、方法辅导与实践研习，让答案可追溯，让探索可以独立延续。</p></article>
+        <article><span>03</span><h3>心智与连接<small lang="en">Mind &amp; Connection</small></h3><p>下一段航程，朝向心绪与关系的未明之处。探索面向陪伴者的心理健康认知与沟通学习工具，让靠近多一分理解，也多一分边界。</p></article>
+      </div>
+      <blockquote cite="https://www.nasa.gov/wp-content/uploads/static/history/alsj/a11/A11CongressJOD.html"><p lang="en">“Mystery creates wonder and wonder is the basis for man’s desire to understand.”</p><p class="quote-translation">神秘引发惊奇，而惊奇是人类渴望理解的根源。</p><footer>— Neil A. Armstrong · 尼尔·阿姆斯特朗</footer></blockquote>
+      <div class="closing-signal"><div class="brand-slogan"><p class="brand-voyage">沿智能之河，越过所见，抵达未知。</p><p class="brand-beyond">远不止于此。</p><p class="brand-english" lang="en">Intelligence, Far Beyond the Visible.</p></div></div>
+    </section>
+  </main>
+  <footer class="lab-footer"><span>ERIDANUS AI NEO LAB · 2026</span><span>波江座（长沙）人工智能应用软件有限责任公司</span><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">湘ICP备2026023017号-1</a><a href="https://beian.mps.gov.cn/#/query/webSearch?code=43010402003011" target="_blank" rel="noopener noreferrer">湘公网安备43010402003011号</a></footer>
+  <noscript><p class="noscript-note">当前浏览器未启用 JavaScript。实验室介绍仍可阅读，交互星图需要启用 JavaScript。</p></noscript>
+  <script defer src="lab-boot.js?v=20260913-brand1"></script>
+</body>
+</html>

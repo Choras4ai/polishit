@@ -46,18 +46,18 @@ async function registerDevice(db, cfg, rawFingerprint, meta = {}) {
   let isNew = false;
 
   if (!device) {
-    isNew = true;
     const displayName = meta.hostname
       ? `设备-${String(meta.hostname).slice(0, 20)}`
       : `设备-${fpHash.slice(0, 8)}`;
 
-    await db.run(
+    const insertResult = await db.run(
       `INSERT INTO devices (
         fingerprint_hash, display_name, platform, hostname,
         credit_balance, credit_granted,
         trial_uses_total, trial_uses_used,
         status, created_at, updated_at, last_seen_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, 0, 'active', ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 0, 'active', ?, ?, ?)
+      ON CONFLICT(fingerprint_hash) DO NOTHING`,
       [
         fpHash,
         displayName,
@@ -74,6 +74,7 @@ async function registerDevice(db, cfg, rawFingerprint, meta = {}) {
       'SELECT * FROM devices WHERE fingerprint_hash = ?',
       [fpHash],
     );
+    isNew = insertResult.changes > 0;
   } else {
     await db.run(
       'UPDATE devices SET last_seen_at = ?, updated_at = ? WHERE id = ?',
@@ -125,6 +126,7 @@ async function getDeviceByToken(db, authHeader) {
        JOIN devices d ON d.id = dt.device_id
       WHERE dt.token_hash = ?
         AND dt.expires_at > ?
+        AND d.status = 'active'
       LIMIT 1`,
     [tokenHash, now],
   );

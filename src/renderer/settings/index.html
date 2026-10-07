@@ -50,6 +50,10 @@
         <span class="home-status-value" id="homeTask">–</span>
       </div>
       <div class="home-status-row">
+        <span class="home-status-label">多版本建议</span>
+        <span class="home-status-value" id="homeVariants">–</span>
+      </div>
+      <div class="home-status-row">
         <span class="home-status-label">商业账户</span>
         <span class="home-status-value" id="homeAccount">–</span>
       </div>
@@ -61,7 +65,10 @@
 
     <!-- Quick start guide -->
     <div class="home-guide">
-      <h3 class="home-section-title">🚀 快速开始</h3>
+      <div class="home-guide-heading">
+        <h3 class="home-section-title">快速开始</h3>
+        <button class="btn btn-secondary btn-sm" id="btnRestartOnboarding" type="button">重新运行引导</button>
+      </div>
       <div class="home-steps">
         <div class="home-step">
           <span class="home-step-num">1</span>
@@ -83,7 +90,7 @@
           <span class="home-step-num">3</span>
           <div class="home-step-content">
             <div class="home-step-title">试一试</div>
-            <p class="home-step-desc">在任意应用中选中一段中文文字，按快捷键，查看 AI 给出的逐条修改建议。</p>
+            <p class="home-step-desc">在任意应用中选中文字，轻量浮窗会自动出现；点击“润色”，悬停批注查看建议，再点击即可写回原文。</p>
           </div>
         </div>
       </div>
@@ -152,72 +159,76 @@
     <!-- ── 已登录：用户仪表盘 ── -->
     <div class="account-dashboard hidden" id="accountDashboard">
 
-      <!-- 账户信息卡片 -->
-      <div class="account-card" id="accountCard">
-        <div class="account-card-header">
-          <div>
-            <div class="account-card-title" id="accountSubtitle">未登录</div>
+      <!-- 账户总览：身份、余额与签到放在一个紧凑控制台中 -->
+      <div class="account-console" id="accountCard">
+        <div class="account-console-header">
+          <div class="account-identity">
+            <div class="account-avatar" aria-hidden="true">润</div>
+            <div class="account-identity-copy">
+              <div class="account-identity-topline">
+                <span class="account-card-title" id="accountSubtitle">未登录</span>
+                <span class="account-plan-pill" id="accountPlanName">游客</span>
+              </div>
+              <strong class="account-email" id="accountPhone">–</strong>
+              <span class="account-session" id="accountSessionInfo">–</span>
+            </div>
           </div>
           <div class="account-card-actions">
-            <button class="btn btn-secondary btn-sm" id="btnRefreshCommercialStatus" type="button">刷新</button>
-            <button class="btn btn-secondary btn-sm" id="btnCommercialLogout" type="button">退出登录</button>
+            <button class="account-icon-button" id="btnRefreshCommercialStatus" type="button" title="刷新账户状态" aria-label="刷新账户状态">↻</button>
+            <button class="account-logout-button" id="btnCommercialLogout" type="button">退出</button>
           </div>
         </div>
-        <div class="account-grid">
-          <div class="account-metric">
-            <span class="account-metric-label">邮箱</span>
-            <span class="account-metric-value" id="accountPhone">–</span>
-          </div>
-          <div class="account-metric">
-            <span class="account-metric-label">账户类型</span>
-            <span class="account-metric-value" id="accountPlanName">游客</span>
-          </div>
-          <div class="account-metric account-metric-wide">
-            <span class="account-metric-label">积分状态</span>
-            <span class="account-metric-value" id="accountSessionInfo">–</span>
-          </div>
-        </div>
-      </div>
 
-      <!-- 积分额度 -->
-      <div class="credits-card" id="creditsCard">
-        <div class="credits-header">
-          <span class="credits-title">积分余额</span>
-          <span class="credits-summary" id="creditsSummary">– / –</span>
-        </div>
-        <div class="credits-bar-track">
-          <div class="credits-bar-fill" id="creditsBarFill" style="width: 0%"></div>
-        </div>
-        <p class="credits-hint" id="creditsHint">登录并充值后显示积分额度</p>
-      </div>
+        <div class="account-console-grid">
+          <section class="credits-card" id="creditsCard" aria-label="积分余额">
+            <div class="credits-header">
+              <span class="credits-title">可用积分</span>
+              <span class="credits-live-pill">实时余额</span>
+            </div>
+            <div class="credits-value-row">
+              <strong class="credits-summary" id="creditsSummary">–</strong>
+              <span>积分</span>
+            </div>
+            <div class="credits-bar-track">
+              <div class="credits-bar-fill" id="creditsBarFill" style="width: 0%"></div>
+            </div>
+            <p class="credits-hint" id="creditsHint">登录并充值后显示积分额度</p>
+            <button class="credits-link-button" id="btnJumpToPlans" type="button">查看积分包 <span aria-hidden="true">→</span></button>
+          </section>
 
-      <!-- 每日签到 -->
-      <div class="checkin-card" id="checkinCard">
-        <div class="checkin-header">
-          <span class="checkin-title">📅 每日签到</span>
-          <button class="btn btn-primary btn-sm" id="btnCheckin" type="button">签到领积分</button>
+          <section class="checkin-card" id="checkinCard" aria-label="每日签到">
+            <div class="checkin-main">
+              <div class="checkin-reward" aria-hidden="true">
+                <span>+1</span>
+                <small>每日积分</small>
+              </div>
+              <div class="checkin-copy">
+                <div class="checkin-title">今天也来润一下</div>
+                <p>每个自然日可领取 1 积分，次日自动刷新</p>
+              </div>
+            </div>
+            <button class="btn btn-primary checkin-button" id="btnCheckin" type="button">签到领 +1</button>
+            <div class="checkin-status-line">
+              <span class="checkin-status-dot" id="checkinStatusDot" aria-hidden="true"></span>
+              <p class="checkin-hint" id="checkinHint">今日未签到，点击即可领取</p>
+            </div>
+          </section>
         </div>
-        <div class="checkin-week" id="checkinWeek">
-          <div class="checkin-day" data-day="1"><span class="checkin-day-num">1</span><span class="checkin-day-pts">+1</span></div>
-          <div class="checkin-day" data-day="2"><span class="checkin-day-num">2</span><span class="checkin-day-pts">+1</span></div>
-          <div class="checkin-day" data-day="3"><span class="checkin-day-num">3</span><span class="checkin-day-pts">+1</span></div>
-          <div class="checkin-day" data-day="4"><span class="checkin-day-num">4</span><span class="checkin-day-pts">+1</span></div>
-          <div class="checkin-day" data-day="5"><span class="checkin-day-num">5</span><span class="checkin-day-pts">+1</span></div>
-          <div class="checkin-day" data-day="6"><span class="checkin-day-num">6</span><span class="checkin-day-pts">+1</span></div>
-          <div class="checkin-day" data-day="7"><span class="checkin-day-num">7</span><span class="checkin-day-pts">+1</span></div>
-        </div>
-        <p class="checkin-hint" id="checkinHint">每天签到领取 1 积分，积分可直接用于润色</p>
       </div>
 
       <!-- 模型选择 -->
       <div class="model-picker" id="modelPicker">
         <div class="model-picker-header">
-          <span class="model-picker-title">模型</span>
+          <div>
+            <span class="model-picker-title">选择润色模型</span>
+            <p class="model-picker-subtitle">按文本难度选择，当前模型会自动用于下一次润色</p>
+          </div>
+          <span class="model-picker-count">通用模型</span>
         </div>
         <div class="model-picker-list" id="modelList">
           <!-- Populated by JS -->
         </div>
-        <p class="model-picker-hint">倍率越高效果越好；积分消耗 = 字数基础积分 × 模型倍率，多轮模式会按实际轮次累计。</p>
+        <p class="model-picker-hint">仅提供通用写作与文本润色模型；倍率统一使用整数，最终消耗取字数倍率与成本保护值的较高者，多轮模式按实际轮次累计。</p>
       </div>
 
       <!-- 充值积分 -->
@@ -225,7 +236,7 @@
         <h3 class="plans-title">充值积分</h3>
         <div class="plans-policy" id="creditPolicyCard">
           <div class="plans-policy-title">积分规则</div>
-          <div class="plans-policy-body" id="creditPolicyBody">标准模型单轮约 800 字 / 1 积分；高阶模型按倍率计费；单次最多 12000 字。</div>
+          <div class="plans-policy-body" id="creditPolicyBody">单轮约 800 字 / 基础积分；按模型倍率与成本保护线计费；单次最多 12000 字。</div>
           <div class="plans-policy-footnote" id="creditPolicyFootnote">修改说明属于附加分析，按半轮折算；自配 API 不走润石积分。</div>
         </div>
         <div class="plans-grid" id="plansGrid">
@@ -264,7 +275,7 @@
     <!-- Built-in badge (shown for Together AI) -->
     <div class="builtin-badge hidden" id="builtinBadge">
       <span class="badge-icon">✨</span>
-      <span>使用内置免费 API，开箱即用无需配置</span>
+      <span>托管模式由后端提供模型服务，自配模式需填写 API Key</span>
     </div>
 
     <!-- Advanced fields (collapsible) -->
@@ -314,12 +325,16 @@
     <div class="form-group">
       <label class="form-label">修改快捷键</label>
       <p class="form-hint">点击下方输入框，然后按下新的快捷键组合（需包含修饰键）</p>
-      <div class="shortcut-capture" id="shortcutCapture" tabindex="0">
+      <button class="shortcut-capture" id="shortcutCapture" type="button"
+              aria-label="点击后录入新的全局快捷键" aria-describedby="shortcutCaptureHint">
         点击此处，然后按下快捷键…
+      </button>
+      <p class="form-hint" id="shortcutCaptureHint">点击框后，它会变为“正在录入”。请一次按下修饰键和一个字母，例如 ⌘⌥V。</p>
+      <div class="form-actions form-actions-compact">
+        <button class="btn btn-primary" id="btnSaveShortcut" disabled>保存快捷键</button>
+        <button class="btn btn-secondary" id="btnResetShortcut" type="button">恢复推荐快捷键</button>
+        <span class="status-text" id="shortcutStatus" aria-live="polite"></span>
       </div>
-      <p class="form-hint">当前仅支持系统级组合键，不支持 Ctrl/Cmd + C + V、双击 C 这类连续或多主键序列；Electron 全局快捷键只能监听一个主键配合修饰键。</p>
-      <button class="btn btn-primary" id="btnSaveShortcut" disabled>保存快捷键</button>
-      <span class="status-text" id="shortcutStatus"></span>
     </div>
   </section>
 
@@ -338,12 +353,29 @@
         </label>
       </div>
       <div class="toolbar-status-card">
+        <div class="diagnostic-list">
+          <div class="diagnostic-row">
+            <span>浮窗开关</span>
+            <span class="diagnostic-badge" id="toolbarSwitchState">检测中</span>
+          </div>
+          <div class="diagnostic-row">
+            <span>macOS 辅助功能</span>
+            <span class="diagnostic-badge" id="toolbarPermissionState">检测中</span>
+          </div>
+          <div class="diagnostic-row">
+            <span>选区监听组件</span>
+            <span class="diagnostic-badge" id="toolbarProbeState">检测中</span>
+          </div>
+        </div>
         <p class="toolbar-status-line" id="floatingToolbarStatus">正在检查浮窗状态…</p>
         <p class="toolbar-status-line toolbar-status-line-secondary" id="floatingToolbarStatusDetail"></p>
+        <p class="toolbar-status-line toolbar-status-line-secondary" id="floatingToolbarLastEvent"></p>
         <div class="toolbar-status-actions">
           <button class="btn btn-secondary" id="btnRefreshToolbarStatus" type="button">重新检查</button>
           <button class="btn btn-secondary hidden" id="btnOpenAccessibility" type="button">打开辅助功能设置</button>
+          <button class="btn btn-primary" id="btnTestToolbar" type="button">显示测试浮窗</button>
         </div>
+        <p class="form-hint toolbar-test-hint">“显示测试浮窗”只验证界面和点击，不调用 AI，也不会消耗积分。</p>
       </div>
     </div>
     <div class="form-group">
@@ -363,6 +395,19 @@
           <input type="radio" name="genreMode" value="casual">
           <span>日常写作</span>
           <span class="radio-desc">尊重个人表达风格，允许适度优化，不过度书面化</span>
+        </label>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">润色方案</label>
+      <div class="toggle-row featured-toggle">
+        <div class="toggle-copy">
+          <div class="toggle-title">提供多个润色版本 <span class="default-pill">默认开启</span></div>
+          <p class="form-hint">先显示主方案，另外两个方案在后台生成，可直接切换比较。开启后一次润色最多消耗约 3 次调用积分。</p>
+        </div>
+        <label class="switch" for="multipleVersionsEnabled">
+          <input type="checkbox" id="multipleVersionsEnabled" checked>
+          <span class="switch-slider"></span>
         </label>
       </div>
     </div>
@@ -432,101 +477,108 @@
   <!-- About Tab -->
   <section class="tab-panel" id="panel-about">
     <div class="about-content">
-      <div class="about-header">
-        <img class="about-icon-img" src="../../../assets/icon-256.png" alt="润石">
-        <h2 class="about-title">润石 PoliShit</h2>
-        <p class="about-version">Version <span id="aboutVersion">--</span></p>
-        <p class="about-desc">
-          润色构石，构石虽糙，一润成文。<br>
-          选中文字，一键润色/降AIGC，修改意见悬浮呈现。
-        </p>
-        <p class="about-desc-sub">
-          通俗来说：选中任何中文文字，按快捷键，AI 帮你改得更好。
-        </p>
-        <p class="about-note">
-          ⚠️ 本工具仅辅助写作，所有建议仅供参考。请遵守所在机构的学术诚信规定。
-        </p>
-      </div>
+      <section class="about-hero">
+        <div class="about-brand">
+          <img class="about-icon-img" src="../../../assets/icon-256.png" alt="润石">
+          <div class="about-brand-copy">
+            <div class="about-kicker">RUNSHI · AI WRITING ASSISTANT</div>
+            <div class="about-title-row">
+              <h2 class="about-title">润石 <span>PoliShit</span></h2>
+              <span class="about-version">v<span id="aboutVersion">--</span></span>
+            </div>
+            <p class="about-desc">润色构石，构石虽糙，一润成文。</p>
+            <p class="about-desc-sub">选中文字，即刻获得可审阅、可替换、可回退的修改建议。</p>
+          </div>
+        </div>
 
-      <section class="about-update-card">
-        <div class="about-update-header">
-          <div>
-            <div class="about-update-title">版本更新</div>
-            <div class="about-update-status" id="aboutUpdateStatus">尚未检查更新</div>
+        <div class="about-update-card">
+          <div class="about-update-copy">
+            <span class="about-update-dot" aria-hidden="true"></span>
+            <div>
+              <div class="about-update-title">软件更新</div>
+              <div class="about-update-status" id="aboutUpdateStatus">尚未检查更新</div>
+              <p class="about-update-meta" id="aboutUpdateMeta">当前版本 --</p>
+            </div>
           </div>
           <div class="inline-row">
             <button class="btn btn-secondary" id="btnCheckUpdates" type="button">检查更新</button>
-            <button class="btn btn-primary hidden" id="btnOpenLatestRelease" type="button">前往下载</button>
+            <button class="btn btn-primary hidden" id="btnInstallUpdate" type="button">立即更新</button>
           </div>
         </div>
-        <p class="about-update-meta" id="aboutUpdateMeta">当前版本 --</p>
       </section>
 
-      <section class="about-showcase">
-        <div class="about-showcase-header">
-          <span class="about-showcase-title">✓ 润石方式</span>
-          <span class="about-showcase-badge">原子级修订</span>
+      <section class="about-workflow">
+        <div class="about-section-heading">
+          <div>
+            <span class="about-section-eyebrow">WORKFLOW</span>
+            <h3>三步完成一次可靠润色</h3>
+          </div>
+          <span class="about-section-caption">不打断写作，不隐藏改动</span>
         </div>
-
-        <div class="about-demo-editor">
-          <p class="about-demo-text">
-            在当前<span class="about-demo-selected">经济形势下</span>国内消费市场呈现出<span class="about-demo-underline about-demo-underline-wording">复什</span>的局面，各方面<span class="about-demo-underline about-demo-underline-grammar">因数</span>相互交织。
-          </p>
-          <div class="about-demo-toolbar">
-            <span class="about-demo-tool about-demo-tool-active">✦ 润色</span>
-            <span class="about-demo-tool">👤 降AIGC</span>
-          </div>
+        <div class="about-workflow-grid">
+          <article class="about-workflow-step">
+            <span class="about-workflow-num">01</span>
+            <div class="about-workflow-icon">选</div>
+            <h4>选中文本</h4>
+            <p>在 Word、WPS 或任意编辑器中选中需要调整的内容。</p>
+          </article>
+          <article class="about-workflow-step">
+            <span class="about-workflow-num">02</span>
+            <div class="about-workflow-icon">润</div>
+            <h4>一键润色</h4>
+            <p>浮窗轻量出现，按需选择润色、降 AIGC 或多个表达版本。</p>
+          </article>
+          <article class="about-workflow-step">
+            <span class="about-workflow-num">03</span>
+            <div class="about-workflow-icon">审</div>
+            <h4>逐条审阅</h4>
+            <p>在原文旁查看理由，接受或忽略每一处建议后再写回。</p>
+          </article>
         </div>
-
-        <div class="about-demo-popup">
-          <span class="about-demo-tag">用词</span>
-          <div class="about-demo-suggestion"><del>复什</del> → <ins>复杂</ins></div>
-          <div class="about-demo-reason">错别字修正：“什”应为“杂”</div>
-          <div class="about-demo-actions">
-            <button class="about-demo-action about-demo-action-primary" type="button">✓ 接受</button>
-            <button class="about-demo-action" type="button">✕ 忽略</button>
-          </div>
-        </div>
-
-        <div class="about-demo-steps">
-          <div class="about-demo-step">
-            <span class="about-demo-step-num">1</span>
-            <span class="about-demo-step-text">选中文字，浮窗自动出现</span>
-            <span class="about-demo-step-meta">0s</span>
-          </div>
-          <div class="about-demo-step">
-            <span class="about-demo-step-num">2</span>
-            <span class="about-demo-step-text">点击「润色」，AI 原地分析</span>
-            <span class="about-demo-step-meta">3s</span>
-          </div>
-          <div class="about-demo-step">
-            <span class="about-demo-step-num">3</span>
-            <span class="about-demo-step-text">逐条审阅，一键接受/忽略</span>
-            <span class="about-demo-step-meta">✓</span>
-          </div>
-        </div>
-
-        <div class="about-demo-summary">🎯 选中即改 · 每处改动可见 · 原文语义不丢失</div>
       </section>
 
-      <div class="about-features">
-        <div class="feature-item">🔒 模式可选：可直连自配 API，也可走会员托管后端</div>
-        <div class="feature-item">⚡ 极速响应：全局快捷键即时触发</div>
-        <div class="feature-item">🤖 多智能体：语法 + 风格分步润色</div>
-        <div class="feature-item">📝 逐条审阅：每处修改可独立接受或拒绝</div>
-      </div>
+      <section class="about-capabilities">
+        <div class="about-section-heading">
+          <div>
+            <span class="about-section-eyebrow">CAPABILITIES</span>
+            <h3>专注中文写作本身</h3>
+          </div>
+        </div>
+        <div class="about-feature-grid">
+          <div class="about-feature-card">
+            <span class="about-feature-mark">A</span>
+            <div><strong>原文内批阅</strong><p>修改位置与理由一一对应</p></div>
+          </div>
+          <div class="about-feature-card">
+            <span class="about-feature-mark">多</span>
+            <div><strong>多版本建议</strong><p>比较不同语气与表达方式</p></div>
+          </div>
+          <div class="about-feature-card">
+            <span class="about-feature-mark">⌘</span>
+            <div><strong>全局快捷键</strong><p>不切换窗口即可开始处理</p></div>
+          </div>
+          <div class="about-feature-card">
+            <span class="about-feature-mark">API</span>
+            <div><strong>模式自由</strong><p>自配 API 或会员托管后端</p></div>
+          </div>
+        </div>
+      </section>
 
-      <div class="about-author">
-        <div class="about-author-label">开发者</div>
-        <a class="about-author-link" id="authorLink" href="#">
-          <span class="about-author-avatar">陈</span>
+      <section class="about-footer-grid">
+        <a class="about-author-link" id="authorLink" href="https://www.runshi.top/lab/" aria-label="打开波江座人工智能 NEO LAB 官网">
+          <span class="about-github-mark" aria-hidden="true">✦</span>
           <div class="about-author-info">
-            <span class="about-author-name">陈实之</span>
-            <span class="about-author-url">小红书主页</span>
+            <span class="about-author-label">ERIDANUS AI · NEO LAB</span>
+            <span class="about-author-name">波江座人工智能实验室</span>
+            <span class="about-author-url">沿智能之河，越过所见，抵达未知。</span>
           </div>
           <span class="about-author-arrow">→</span>
         </a>
-      </div>
+        <div class="about-integrity-note">
+          <span>写作责任</span>
+          <p>润石提供辅助建议，最终内容由使用者审阅并负责。请遵守所在机构的学术诚信规范。</p>
+        </div>
+      </section>
     </div>
   </section>
 

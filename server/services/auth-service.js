@@ -18,12 +18,12 @@ function hashValue(value) {
   return crypto.createHash('sha256').update(String(value)).digest('hex');
 }
 
-function randomCode() {
-  return String(Math.floor(100000 + Math.random() * 900000));
-}
-
 function randomToken() {
   return crypto.randomBytes(32).toString('hex');
+}
+
+function randomCode() {
+  return String(crypto.randomInt(100000, 1000000));
 }
 
 // ---------- Password hashing (scrypt, no native deps) ----------
@@ -111,6 +111,9 @@ function buildAccountPayload(user, extra = {}) {
 }
 
 async function issueVerificationCode(db, cfg, rawPhone) {
+  if (cfg.isProduction || cfg.smsProvider !== 'mock') {
+    throw Object.assign(new Error('短信登录尚未配置，请使用邮箱登录。'), { status: 503 });
+  }
   const phone = assertPhone(rawPhone);
   const latest = await db.get(
     `SELECT created_at
@@ -156,6 +159,9 @@ async function issueVerificationCode(db, cfg, rawPhone) {
 }
 
 async function loginWithCode(db, cfg, rawPhone, code, metadata = {}) {
+  if (cfg.isProduction) {
+    throw Object.assign(new Error('短信登录尚未配置，请使用邮箱登录。'), { status: 503 });
+  }
   const phone = assertPhone(rawPhone);
   const normalizedCode = String(code || '').trim();
   if (!/^\d{6}$/.test(normalizedCode)) {
@@ -193,10 +199,13 @@ async function loginWithCode(db, cfg, rawPhone, code, metadata = {}) {
   }
 
   const now = new Date();
-  await db.run(
-    'UPDATE verification_codes SET consumed_at = ? WHERE id = ?',
+  const consumed = await db.run(
+    'UPDATE verification_codes SET consumed_at = ? WHERE id = ? AND consumed_at IS NULL',
     [now.toISOString(), record.id],
   );
+  if (!consumed.changes) {
+    throw Object.assign(new Error('验证码已使用，请重新获取。'), { status: 400 });
+  }
 
   let user = await db.get('SELECT * FROM users WHERE phone = ?', [phone]);
   if (!user) {
@@ -424,79 +433,83 @@ async function loginWithPassword(db, cfg, rawEmail, rawPassword, metadata = {}) 
 // ---------- Device → User binding ----------
 
 async function bindDeviceToUser(db, cfg, userId, deviceId) {
-  const updatedAt = nowIso();
-  const device = await db.get(
-    `SELECT id, user_id, credit_balance, credit_granted,
-            trial_uses_total, trial_uses_used
-       FROM devices
-      WHERE id = ?`,
-    [deviceId],
-  );
-  if (!device) {
-    const err = new Error('设备不存在。');
-    err.status = 404;
-    throw err;
-  }
-
-  if (device.user_id && Number(device.user_id) !== Number(userId)) {
-    const err = new Error('该设备已绑定到其他账户。');
-    err.status = 409;
-    throw err;
-  }
-
-  if (Number(device.user_id) === Number(userId)) {
-    return;
-  }
-
-  const dm = await db.get(
-    'SELECT credits_total, credits_used FROM device_memberships WHERE device_id = ?',
-    [deviceId],
-  );
-  const remainingBalance = Math.max(0, Number(device.credit_balance || 0));
-  const remainingCredits = dm
-    ? Math.max(0, Number(dm.credits_total || 0) - Number(dm.credits_used || 0))
-    : 0;
-  const remainingTrial = Math.max(0, Number(device.trial_uses_total || 0) - Number(device.trial_uses_used || 0));
-
-  await db.run(
-    `UPDATE devices
-        SET user_id = ?,
-            credit_balance = 0,
-            trial_uses_used = trial_uses_total,
-            updated_at = ?
-      WHERE id = ?
-        AND user_id IS NULL`,
-    [userId, updatedAt, deviceId],
-  );
-
-  if (remainingBalance > 0) {
-    await db.run(
-      'UPDATE users SET credit_balance = credit_balance + ?, credit_granted = credit_granted + ?, updated_at = ? WHERE id = ?',
-      [remainingBalance, remainingBalance, updatedAt, userId],
+  return db.transaction(async (db) => {
+    const updatedAt = nowIso();
+    const device = await db.get(
+      `SELECT id, user_id, credit_balance, credit_granted,
+              trial_uses_total, trial_uses_used
+         FROM devices
+        WHERE id = ?`,
+      [deviceId],
     );
-  }
+    if (!device) {
+      const err = new Error('设备不存在。');
+      err.status = 404;
+      throw err;
+    }
 
-  if (remainingCredits > 0) {
-    await db.run(
-      'UPDATE users SET credit_balance = credit_balance + ?, credit_granted = credit_granted + ?, updated_at = ? WHERE id = ?',
-      [remainingCredits, remainingCredits, updatedAt, userId],
+    if (device.user_id && Number(device.user_id) !== Number(userId)) {
+      const err = new Error('该设备已绑定到其他账户。');
+      err.status = 409;
+      throw err;
+    }
+
+    if (Number(device.user_id) === Number(userId)) {
+      return;
+    }
+
+    const dm = await db.get(
+      'SELECT credits_total, credits_used FROM device_memberships WHERE device_id = ?',
+      [deviceId],
     );
-    await db.run(
-      `UPDATE device_memberships
-          SET credits_used = credits_total,
-              status = 'transferred',
+    const remainingBalance = Math.max(0, Number(device.credit_balance || 0));
+    const remainingCredits = dm
+      ? Math.max(0, Number(dm.credits_total || 0) - Number(dm.credits_used || 0))
+      : 0;
+    const remainingTrial = Math.max(0, Number(device.trial_uses_total || 0) - Number(device.trial_uses_used || 0));
+
+    const claimed = await db.run(
+      `UPDATE devices
+          SET user_id = ?,
+              credit_balance = 0,
+              trial_uses_used = trial_uses_total,
               updated_at = ?
-        WHERE device_id = ?`,
-      [updatedAt, deviceId],
+        WHERE id = ?
+          AND user_id IS NULL`,
+      [userId, updatedAt, deviceId],
     );
-  }
 
-  if (remainingTrial > 0) {
-    await db.run(
-      'UPDATE users SET trial_uses_total = trial_uses_total + ?, updated_at = ? WHERE id = ?',
-      [remainingTrial, updatedAt, userId],
-    );
-  }
+    if (!claimed.changes) return;
+
+    if (remainingBalance > 0) {
+      await db.run(
+        'UPDATE users SET credit_balance = credit_balance + ?, credit_granted = credit_granted + ?, updated_at = ? WHERE id = ?',
+        [remainingBalance, remainingBalance, updatedAt, userId],
+      );
+    }
+
+    if (remainingCredits > 0) {
+      await db.run(
+        'UPDATE users SET credit_balance = credit_balance + ?, credit_granted = credit_granted + ?, updated_at = ? WHERE id = ?',
+        [remainingCredits, remainingCredits, updatedAt, userId],
+      );
+      await db.run(
+        `UPDATE device_memberships
+            SET credits_used = credits_total,
+                status = 'transferred',
+                updated_at = ?
+          WHERE device_id = ?`,
+        [updatedAt, deviceId],
+      );
+    }
+
+    if (remainingTrial > 0) {
+      await db.run(
+        'UPDATE users SET trial_uses_total = trial_uses_total + ?, updated_at = ? WHERE id = ?',
+        [remainingTrial, updatedAt, userId],
+      );
+    }
+  });
 }
 
 /**

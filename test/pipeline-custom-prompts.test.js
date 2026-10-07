@@ -49,6 +49,26 @@ test('empty custom prompt keeps the base system prompt unchanged', () => {
   assert.equal(prompt, '基础提示词');
 });
 
+test('deai prompt uses naturalization strategy without detector promises', async () => {
+  const calls = [];
+  const provider = {
+    async chat(messages) {
+      calls.push(messages);
+      return '改写后的文本';
+    },
+  };
+
+  const pipeline = new AgentPipeline(provider, createConfig());
+  const result = await pipeline._deAI('首先，本研究具有重要意义。其次，该方法发挥重要作用。', 0.3, 'single', () => {}, 'zh');
+
+  assert.equal(result, '改写后的文本');
+  assert.equal(calls.length, 1);
+  assert.match(calls[0][0].content, /降低文本的机械感、模板感和同质化表达/);
+  assert.match(calls[0][0].content, /不是承诺规避任何检测系统/);
+  assert.match(calls[0][0].content, /优先删除不承载信息的连接词/);
+  assert.match(calls[0][0].content, /空泛名词化表达/);
+});
+
 test('normalizeModelOutputText removes invisible diff noise from model output', () => {
   const normalized = normalizeModelOutputText('第一句\u00A0第二句\u200B\r\n第三句');
 

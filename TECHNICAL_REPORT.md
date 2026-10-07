@@ -272,7 +272,6 @@ node --check src/capture.js
 node --check src/ai/pipeline.js
 node --check src/renderer/result/script.js
 node --check src/renderer/settings/script.js
-node --check docs/site.js
 node --check server/index.js
 ```
 

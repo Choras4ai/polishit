@@ -13,6 +13,7 @@ if ! command -v "$NODE_BIN" >/dev/null 2>&1 && [ -x "/Users/choras/local/node/bi
   NODE_BIN="/Users/choras/local/node/bin/node"
 fi
 REPO="$("$NODE_BIN" -e "const url=require('$ROOT_DIR/package.json').repository.url||''; const m=url.match(/github\\.com[:/](.+?)\\.git$/); if(!m){process.exit(1)}; process.stdout.write(m[1])")"
+REMOTE_URL="$(git -C "$ROOT_DIR" remote get-url origin)"
 VERSION="$("$NODE_BIN" -e "process.stdout.write(require('$ROOT_DIR/package.json').version)")"
 TARGET_BRANCH="${RUNSHI_PAGES_BRANCH:-gh-pages}"
 
@@ -26,7 +27,7 @@ echo ""
 TMPDIR="$(mktemp -d)"
 trap 'rm -rf "$TMPDIR"' EXIT
 
-git clone "git@github.com:${REPO}.git" "$TMPDIR/site"
+git clone "$REMOTE_URL" "$TMPDIR/site"
 cd "$TMPDIR/site"
 
 if git ls-remote --exit-code --heads origin "$TARGET_BRANCH" >/dev/null 2>&1; then

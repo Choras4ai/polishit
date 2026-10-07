@@ -47,10 +47,8 @@ class ShortcutManager {
   }
 
   unregisterAll() {
-    if (this.currentAccelerator) {
-      globalShortcut.unregister(this.currentAccelerator);
-      this.currentAccelerator = null;
-    }
+    globalShortcut.unregisterAll();
+    this.currentAccelerator = null;
   }
 }
 

@@ -1,0 +1,40 @@
+[Unit]
+Description=RunShi Commercial Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=runshi
+Group=runshi
+WorkingDirectory=/opt/runshi/server
+Environment=NODE_ENV=production
+EnvironmentFile=/etc/runshi-admin.env
+ExecStart=/usr/bin/node /opt/runshi/server/index.js
+Restart=always
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectHome=true
+ProtectSystem=strict
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+ProtectProc=invisible
+ProcSubset=pid
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+LockPersonality=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+AmbientCapabilities=
+ReadWritePaths=/opt/runshi/data
+
+[Install]
+WantedBy=multi-user.target

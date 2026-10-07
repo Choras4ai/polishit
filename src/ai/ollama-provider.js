@@ -34,6 +34,9 @@ class OllamaProvider extends BaseProvider {
     }
 
     const data = await response.json();
+    if (data.done_reason === 'length') {
+      throw new Error('模型输出达到长度上限，结果可能不完整。请缩短选区后重试。');
+    }
     const content = data.message?.content;
     if (!content) {
       throw new Error('Ollama 返回数据格式异常');

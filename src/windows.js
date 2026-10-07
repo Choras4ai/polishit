@@ -19,29 +19,43 @@ class WindowManager {
 
   // ── Floating Toolbar ──
 
+  _guardLocalRenderer(window) {
+    if (!window || window.isDestroyed()) return;
+    window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+    window.webContents.on('will-navigate', (event) => {
+      event.preventDefault();
+    });
+  }
+
   /**
    * Show the floating selection toolbar near a selection anchor.
    * @param {{ x: number, y: number, width?: number, height?: number }} anchor
    */
   showToolbar(anchor) {
     // Don't show if result window is already open
-    if (this.resultWindow && !this.resultWindow.isDestroyed()) return;
+    if (this.resultWindow && !this.resultWindow.isDestroyed()) return false;
 
     clearTimeout(this._toolbarHideTimer);
 
-    const winW = 252;
-    const winH = 44;
+    const winW = 340;
+    const winH = 118;
     const anchorRect = this._normalizeAnchorRect(anchor);
     const point = this._anchorToPoint(anchorRect);
 
     // Position above the current selection, centered.
+    const toolbarH = 44;
     const display = screen.getDisplayNearestPoint(point);
     const area = display.workArea;
     let x = Math.round(point.x - winW / 2);
-    let y = Math.round((anchorRect?.y ?? point.y) - winH - 10);
+    let y = Math.round((anchorRect?.y ?? point.y) - toolbarH - 8);
 
+    // If above has insufficient space, try below; clamp to screen in both cases
     if (y < area.y + 6) {
-      y = Math.round((anchorRect?.y ?? point.y) + (anchorRect?.height ?? 0) + 14);
+      y = Math.round((anchorRect?.y ?? point.y) + (anchorRect?.height ?? 0) + 8);
+      // If below also doesn't fit, force to bottom edge
+      if (y + winH > area.y + area.height - 6) {
+        y = area.y + area.height - winH - 6;
+      }
     }
     // Clamp horizontally
     if (x < area.x + 4) x = area.x + 4;
@@ -51,7 +65,7 @@ class WindowManager {
       // Reposition existing toolbar
       this.toolbarWindow.setBounds({ x, y, width: winW, height: winH });
       this.toolbarWindow.showInactive();
-      return;
+      return true;
     }
 
     this.toolbarWindow = new BrowserWindow({
@@ -77,6 +91,8 @@ class WindowManager {
       },
     });
 
+    this._guardLocalRenderer(this.toolbarWindow);
+
     this.toolbarWindow.loadFile(
       path.join(__dirname, 'renderer', 'toolbar', 'index.html'),
     );
@@ -88,6 +104,7 @@ class WindowManager {
     });
 
     this.toolbarWindow.on('closed', () => { this.toolbarWindow = null; });
+    return true;
   }
 
   hideToolbar() {
@@ -146,6 +163,8 @@ class WindowManager {
         sandbox: true,
       },
     });
+
+    this._guardLocalRenderer(this.undoWindow);
 
     this.undoWindow.loadFile(
       path.join(__dirname, 'renderer', 'undo', 'index.html'),
@@ -218,23 +237,37 @@ class WindowManager {
       },
     });
 
+    this._guardLocalRenderer(this.resultWindow);
+
     this.resultWindow.loadFile(
       path.join(__dirname, 'renderer', 'result', 'index.html'),
     );
 
+    // Register closed handler early to avoid race condition
+    this.resultWindow.on('closed', () => { this.resultWindow = null; this.onResultClosed?.(); });
+
     // Wait for renderer to fully load, then show without stealing focus
     await new Promise(resolve => {
       this.resultWindow.webContents.once('did-finish-load', () => {
-        this.resultWindow.showInactive();
+        if (this.resultWindow && !this.resultWindow.isDestroyed()) {
+          this.resultWindow.showInactive();
+        }
+        resolve();
+      });
+      // Also handle load failure to avoid hanging forever
+      this.resultWindow.webContents.once('did-fail-load', () => {
         resolve();
       });
     });
 
-    this.resultWindow.on('closed', () => { this.resultWindow = null; });
-
-    this.resultWindow.webContents.on('before-input-event', (_e, input) => {
-      if (input.key === 'Escape') this.hideResult();
-    });
+    if (this.resultWindow && !this.resultWindow.isDestroyed()) {
+      // This listener is installed once per window, and must survive other keys.
+      this.resultWindow.webContents.on('before-input-event', (_e, input) => {
+        if (input.key === 'Escape' && this.resultWindow && !this.resultWindow.isDestroyed()) {
+          this.hideResult();
+        }
+      });
+    }
   }
 
   hideResult() {
@@ -282,12 +315,12 @@ class WindowManager {
   }
 
   _computeResultBounds(anchorBounds, options = {}) {
-    const width = Math.max(480, Math.min(680, Math.round(options.preferredWidth || 520)));
-    const height = Math.max(260, Math.min(800, Math.round(options.preferredHeight || 420)));
     const point = this._anchorToPoint(anchorBounds);
     const display = screen.getDisplayNearestPoint(point);
     const area = display.workArea;
     const margin = 12;
+    const width = Math.min(Math.max(1, area.width - margin * 2), Math.max(560, Math.min(760, Math.round(options.preferredWidth || 700))));
+    const height = Math.min(Math.max(1, area.height - margin * 2), Math.max(520, Math.min(720, Math.round(options.preferredHeight || 620))));
 
     let x;
     let y;
@@ -333,6 +366,13 @@ class WindowManager {
   }
 
   showSettings() {
+    // Settings should never be covered by stale always-on-top helper windows.
+    // Closing these also prevents the selection watcher from reading our own
+    // renderer accessibility tree and recursively triggering another result.
+    this.hideToolbar();
+    this.hideUndoToast();
+    this.hideResult();
+
     if (this.settingsWindow && !this.settingsWindow.isDestroyed()) {
       this.settingsWindow.focus();
       return;
@@ -341,10 +381,10 @@ class WindowManager {
     if (isMac) app.dock.show();
 
     this.settingsWindow = new BrowserWindow({
-      width: 600,
-      height: 720,
-      minWidth: 480,
-      minHeight: 500,
+      width: 780,
+      height: 760,
+      minWidth: 680,
+      minHeight: 560,
       resizable: true,
       minimizable: true,
       ...(isMac
@@ -358,6 +398,8 @@ class WindowManager {
       },
     });
 
+    this._guardLocalRenderer(this.settingsWindow);
+
     this.settingsWindow.loadFile(
       path.join(__dirname, 'renderer', 'settings', 'index.html'),
     );
@@ -368,11 +410,18 @@ class WindowManager {
     });
   }
 
+  showToolbarTest() {
+    const point = screen.getCursorScreenPoint();
+    return this.showToolbar({ x: point.x, y: point.y, width: 1, height: 1 });
+  }
+
   showOnboarding() {
     if (this.onboardingWindow && !this.onboardingWindow.isDestroyed()) {
       this.onboardingWindow.focus();
       return;
     }
+
+    if (isMac) app.dock.show();
 
     this.onboardingWindow = new BrowserWindow({
       width: 560,
@@ -390,6 +439,8 @@ class WindowManager {
         sandbox: true,
       },
     });
+
+    this._guardLocalRenderer(this.onboardingWindow);
 
     this.onboardingWindow.loadFile(
       path.join(__dirname, 'renderer', 'onboarding', 'index.html'),

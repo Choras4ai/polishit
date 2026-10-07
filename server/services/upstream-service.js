@@ -109,6 +109,11 @@ async function proxyChat(upstream, messages, options = {}) {
       }
 
       const data = await response.json();
+      if (data.choices?.[0]?.finish_reason === 'length') {
+        const err = new Error('模型输出达到长度上限，结果可能不完整。请缩短选区后重试。');
+        err.status = 422;
+        throw err;
+      }
       const content = data.choices?.[0]?.message?.content;
       if (!content) {
         const err = new Error('上游返回内容为空。');

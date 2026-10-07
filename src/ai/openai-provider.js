@@ -1,6 +1,7 @@
 'use strict';
 
 const BaseProvider = require('./base-provider');
+const { getChatTimeoutMs } = require('../commercial/model-timeouts');
 
 class OpenAIProvider extends BaseProvider {
   constructor(config) {
@@ -30,7 +31,7 @@ class OpenAIProvider extends BaseProvider {
         'Authorization': `Bearer ${this.apiKey}`,
       },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(60_000),
+      signal: AbortSignal.timeout(getChatTimeoutMs({ model: this.model, requestedTimeoutMs: options.timeoutMs || options.timeout })),
     });
 
     if (!response.ok) {
@@ -39,6 +40,9 @@ class OpenAIProvider extends BaseProvider {
     }
 
     const data = await response.json();
+    if (data.choices?.[0]?.finish_reason === 'length' && options.requireComplete !== false) {
+      throw new Error('模型输出达到长度上限，结果可能不完整。请缩短选区后重试。');
+    }
     const content = data.choices?.[0]?.message?.content;
     if (!content) {
       throw new Error('API 返回数据格式异常');
@@ -49,7 +53,7 @@ class OpenAIProvider extends BaseProvider {
   async testConnection() {
     await this.chat(
       [{ role: 'user', content: '你好' }],
-      { maxTokens: 10, temperature: 0 },
+      { maxTokens: 10, temperature: 0, requireComplete: false },
     );
     return true;
   }

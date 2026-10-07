@@ -193,25 +193,52 @@ function applyPreset(presetId) {
   $('#apiUrl').value = preset.apiUrl || '';
   $('#modelName').value = preset.model || '';
 
-  // Allow editing for all presets except ollama-like local ones
-  $('#apiUrl').readOnly = false;
-  $('#modelName').readOnly = false;
+  // Most built-in presets keep a maintained URL/model pair. Doubao needs the
+  // user's endpoint ID; Ollama needs a model installed on the user's machine.
+  const custom = presetId === 'custom';
+  $('#apiUrl').readOnly = !custom;
+  $('#modelName').readOnly = !(custom || preset.allowModelOverride);
 
   // Close advanced details for simple presets, open for custom
-  if (presetId === 'custom') {
+  if (custom || preset.allowModelOverride) {
     $('#advancedApiFields').open = true;
   }
 }
 
 // ── Shortcut capture ──
 let pendingAccelerator = null;
+const shortcutCapture = $('#shortcutCapture');
 
-$('#shortcutCapture').addEventListener('keydown', (e) => {
+function enterShortcutCapture() {
+  shortcutCapture.focus();
+  shortcutCapture.classList.add('is-listening');
+  if (!shortcutCapture.classList.contains('captured')) {
+    shortcutCapture.textContent = '正在录入…请按下组合键';
+  }
+  showStatus($('#shortcutStatus'), '等待键盘输入', '');
+}
+
+shortcutCapture.addEventListener('click', enterShortcutCapture);
+
+shortcutCapture.addEventListener('keydown', (e) => {
   e.preventDefault();
   e.stopPropagation();
 
+  if (e.key === 'Escape') {
+    pendingAccelerator = null;
+    shortcutCapture.classList.remove('captured', 'is-listening');
+    shortcutCapture.textContent = '点击此处，然后按下快捷键…';
+    $('#btnSaveShortcut').disabled = true;
+    showStatus($('#shortcutStatus'), '已取消录入', '');
+    shortcutCapture.blur();
+    return;
+  }
+
   if (['Meta', 'Control', 'Alt', 'Shift'].includes(e.key)) return;
-  if (!e.metaKey && !e.ctrlKey && !e.altKey) return;
+  if (!e.metaKey && !e.ctrlKey && !e.altKey) {
+    showStatus($('#shortcutStatus'), '请同时按住 ⌘、⌥ 或 Ctrl 等修饰键', 'error');
+    return;
+  }
 
   const parts = [];
   if (e.metaKey || e.ctrlKey) parts.push('CommandOrControl');
@@ -226,23 +253,24 @@ $('#shortcutCapture').addEventListener('keydown', (e) => {
 
   const display = formatShortcut(pendingAccelerator);
 
-  const el = $('#shortcutCapture');
-  el.textContent = display;
-  el.classList.add('captured');
+  shortcutCapture.textContent = display;
+  shortcutCapture.classList.remove('is-listening');
+  shortcutCapture.classList.add('captured');
   $('#btnSaveShortcut').disabled = false;
+  showStatus($('#shortcutStatus'), `已录入 ${display}，请点击保存`, '');
 });
 
-$('#shortcutCapture').addEventListener('focus', () => {
-  const el = $('#shortcutCapture');
-  if (!el.classList.contains('captured')) {
-    el.textContent = '请按下快捷键组合…';
+shortcutCapture.addEventListener('focus', () => {
+  if (!shortcutCapture.classList.contains('captured')) {
+    shortcutCapture.classList.add('is-listening');
+    shortcutCapture.textContent = '正在录入…请按下组合键';
   }
 });
 
-$('#shortcutCapture').addEventListener('blur', () => {
-  const el = $('#shortcutCapture');
-  if (!el.classList.contains('captured')) {
-    el.textContent = '点击此处，然后按下快捷键…';
+shortcutCapture.addEventListener('blur', () => {
+  shortcutCapture.classList.remove('is-listening');
+  if (!shortcutCapture.classList.contains('captured')) {
+    shortcutCapture.textContent = '点击此处，然后按下快捷键…';
   }
 });
 
@@ -255,9 +283,48 @@ function showStatus(el, message, type) {
   }
 }
 
+function setDiagnosticBadge(selector, label, type = '') {
+  const badge = $(selector);
+  if (!badge) return;
+  badge.textContent = label;
+  badge.className = `diagnostic-badge${type ? ` ${type}` : ''}`;
+}
+
 function renderToolbarStatus(status) {
   const enabled = status?.enabled !== false;
   $('#floatingToolbarEnabled').checked = enabled;
+
+  setDiagnosticBadge(
+    '#toolbarSwitchState',
+    enabled ? '已开启' : '已关闭',
+    enabled ? 'success' : 'warning',
+  );
+
+  if (status?.platform !== 'darwin') {
+    setDiagnosticBadge('#toolbarPermissionState', '无需授权', 'success');
+  } else if (status?.accessibilityTrusted) {
+    setDiagnosticBadge('#toolbarPermissionState', '授权有效', 'success');
+  } else if (status?.appAccessibilityTrusted) {
+    setDiagnosticBadge('#toolbarPermissionState', '需要重新授权', 'warning');
+  } else {
+    setDiagnosticBadge('#toolbarPermissionState', '未授权', 'error');
+  }
+
+  if (status?.selectionMonitoringAvailable === false) {
+    setDiagnosticBadge('#toolbarProbeState', '组件不可用', 'error');
+  } else if (status?.platform === 'darwin' && !status?.helperTrusted) {
+    setDiagnosticBadge(
+      '#toolbarProbeState',
+      status?.helperBackend === 'in-process-native' ? '主进程监听 · 等待权限' : '等待权限',
+      'warning',
+    );
+  } else {
+    setDiagnosticBadge(
+      '#toolbarProbeState',
+      status?.helperBackend === 'in-process-native' ? '主进程监听正常' : '运行正常',
+      'success',
+    );
+  }
 
   let summary = '浮窗状态未知。';
   let detail = '可通过快捷键继续触发处理。';
@@ -269,8 +336,12 @@ function renderToolbarStatus(status) {
     summary = '浮窗已启用：选中文本或复制文本都可以触发。';
     detail = '如果某些应用本身不暴露选区，仍可以先复制文本作为回退触发。';
   } else if (status?.platform === 'darwin') {
-    summary = '尚未授予 macOS 辅助功能权限。';
-    detail = '当前可先通过复制文本触发浮窗；授予权限后，选中文本也会直接弹出。';
+    summary = status?.appAccessibilityTrusted
+      ? 'macOS 仍在使用旧的授权记录。'
+      : '尚未授予 macOS 辅助功能权限。';
+    detail = status?.appAccessibilityTrusted
+      ? '请在辅助功能中将“润石”关闭再打开，然后重启应用。复制文本仍可作为临时回退。'
+      : '打开辅助功能设置并允许“润石”控制电脑；授权后请返回这里重新检查。';
   } else {
     summary = '当前平台使用复制回退和快捷键触发。';
     detail = '如果系统不支持选区监听，可先复制文本，或继续使用快捷键。';
@@ -278,6 +349,15 @@ function renderToolbarStatus(status) {
 
   $('#floatingToolbarStatus').textContent = summary;
   $('#floatingToolbarStatusDetail').textContent = detail;
+  const lastEvent = $('#floatingToolbarLastEvent');
+  if (status?.helperError) {
+    lastEvent.textContent = `诊断信息：${status.helperError}`;
+  } else if (status?.lastSelectionAt) {
+    const source = status.lastSelectionSource === 'clipboard' ? '复制文本' : '选中文本';
+    lastEvent.textContent = `最近捕获：${source} · ${formatDateTime(status.lastSelectionAt)}`;
+  } else {
+    lastEvent.textContent = '尚未捕获到外部应用中的文本。';
+  }
   $('#btnOpenAccessibility').classList.toggle(
     'hidden',
     status?.platform !== 'darwin' || Boolean(status?.accessibilityTrusted),
@@ -319,11 +399,17 @@ function renderUpdateStatus(status) {
 
   $('#aboutVersion').textContent = currentVersion.replace(/^v/, '');
   $('#btnCheckUpdates').disabled = Boolean(status.checking);
-  $('#btnOpenLatestRelease').classList.toggle('hidden', !hasUpdate);
+  $('#btnInstallUpdate').classList.toggle('hidden', !hasUpdate);
 
   if (status.checking) {
     $('#aboutUpdateStatus').textContent = '正在检查更新...';
     $('#aboutUpdateMeta').textContent = `当前版本 ${currentVersion}`;
+    return;
+  }
+
+  if (status.lastError) {
+    $('#aboutUpdateStatus').textContent = '更新失败';
+    $('#aboutUpdateMeta').textContent = `当前版本 ${currentVersion}${hasUpdate ? ` · 可更新至 ${latestVersion}` : ''} · ${status.lastError}`;
     return;
   }
 
@@ -342,12 +428,6 @@ function renderUpdateStatus(status) {
     return;
   }
 
-  if (status.lastError) {
-    $('#aboutUpdateStatus').textContent = '检查更新失败';
-    $('#aboutUpdateMeta').textContent = `当前版本 ${currentVersion} · ${status.lastError}`;
-    return;
-  }
-
   $('#aboutUpdateStatus').textContent = '当前已是最新版本';
   $('#aboutUpdateMeta').textContent = `当前版本 ${currentVersion} · 最近检查 ${checkedAt}`;
 }
@@ -356,25 +436,15 @@ async function renderModelList() {
   const container = $('#modelList');
   if (!container) return;
 
-  if (modelListCache.length === 0) {
+  {
     try {
       modelListCache = await window.polishAPI.getCommercialModels() || [];
     } catch (_) {
       modelListCache = [];
     }
     if (modelListCache.length === 0) {
-      modelListCache = [
-        { id: 'qwen3-8b', name: 'Qwen3-8B', provider: '通义千问', credits: 0.5, description: '极速模型', badge: '极速', tier: '基础' },
-        { id: 'kimi-k2.6', name: 'Kimi-K2.6', provider: 'Moonshot', credits: 1, description: '最新旗舰，多模态智能体', badge: '新', tier: '标准' },
-        { id: 'kimi-k2.5', name: 'Kimi-K2.5', provider: 'Moonshot', credits: 1, description: '中文理解力强', badge: '', tier: '标准' },
-        { id: 'glm-4.7', name: 'GLM-4.7', provider: '智谱', credits: 1, description: '快速高效', badge: '', tier: '标准' },
-        { id: 'deepseek-v3-671b', name: 'DeepSeek-V3', provider: 'DeepSeek', credits: 1, description: '671B MoE', badge: '', tier: '标准' },
-        { id: 'deepseek-v3.2', name: 'DeepSeek-V3.2', provider: 'DeepSeek', credits: 2, description: '最新旗舰', badge: '', tier: '高级' },
-        { id: 'qwen3.5-397b', name: 'Qwen3.5-397B', provider: '通义千问', credits: 2, description: '397B MoE', badge: '', tier: '高级' },
-        { id: 'deepseek-v4-flash', name: 'DeepSeek-V4-Flash', provider: 'DeepSeek', credits: 2, description: 'V4 预览版 284B MoE', badge: '新', tier: '高级' },
-        { id: 'glm-5.1', name: 'GLM-5.1', provider: '智谱', credits: 3, description: '智谱旗舰 754B MoE', badge: '旗舰', tier: '旗舰' },
-        { id: 'minimax-m2.5', name: 'MiniMax-M2.5', provider: 'MiniMax', credits: 3, description: '最新大语言模型', badge: '', tier: '旗舰' },
-      ];
+      container.textContent = '暂时无法获取最新模型列表，请检查网络后重新打开此页。';
+      return;
     }
   }
 
@@ -382,14 +452,6 @@ async function renderModelList() {
   const selectedModel = cfg.commercial?.selectedModel || '';
   const canSelectModel = Boolean(commercialStatusCache?.loggedIn && (commercialStatusCache?.totalAvailable || 0) > 0);
   container.innerHTML = '';
-
-  // Speed hints based on credits tier
-  const speedHint = (credits) => {
-    if (credits <= 0.5) return { text: '极速', cls: 'speed-fast' };
-    if (credits <= 1) return { text: '较快', cls: 'speed-fast' };
-    if (credits <= 2) return null;
-    return { text: '较慢', cls: 'speed-slow' };
-  };
 
   // Group by tier
   const tierMap = new Map();
@@ -411,13 +473,14 @@ async function renderModelList() {
       const isActive = model.id === selectedModel;
       const row = document.createElement('div');
       row.className = 'model-row' + (isActive ? ' active' : '') + (!canSelectModel ? ' disabled' : '');
+      row.setAttribute('role', 'button');
+      row.tabIndex = canSelectModel ? 0 : -1;
+      row.setAttribute('aria-disabled', String(!canSelectModel));
+      row.setAttribute('aria-pressed', String(isActive));
+      row.setAttribute('aria-label', `${model.name}，${model.credits} 倍积分`);
 
       const badgeHtml = model.badge
         ? `<span class="model-badge${model.credits >= 5 ? ' premium' : ''}">${escapeHtml(model.badge)}</span>`
-        : '';
-      const speed = speedHint(model.credits);
-      const speedHtml = speed
-        ? `<span class="model-badge ${speed.cls}">${speed.text}</span>`
         : '';
 
       row.innerHTML = `
@@ -427,26 +490,41 @@ async function renderModelList() {
           <div class="model-row-provider">${escapeHtml(model.provider)} · ${escapeHtml(model.description || '')}</div>
         </div>
         <div class="model-row-meta">
-          ${speedHtml}
-          <span class="model-multiplier">${model.credits}×</span>
+          <span class="model-multiplier">${model.credits}×起</span>
         </div>
       `;
 
       if (canSelectModel) {
-        row.addEventListener('click', async () => {
+        const selectModel = async () => {
           await window.polishAPI.setConfig('commercial.selectedModel', model.id);
-          container.querySelectorAll('.model-row').forEach(el => el.classList.remove('active'));
+          container.querySelectorAll('.model-row').forEach((el) => {
+            el.classList.remove('active');
+            el.setAttribute('aria-pressed', 'false');
+          });
           row.classList.add('active');
+          row.setAttribute('aria-pressed', 'true');
+        };
+        row.addEventListener('click', selectModel);
+        row.addEventListener('keydown', async (event) => {
+          if (event.key !== 'Enter' && event.key !== ' ') return;
+          event.preventDefault();
+          await selectModel();
         });
       }
       container.appendChild(row);
     }
   }
 
-  if (!selectedModel && modelListCache.length > 0 && canSelectModel) {
-    await window.polishAPI.setConfig('commercial.selectedModel', modelListCache[0].id);
-    const first = container.querySelector('.model-row');
-    if (first) first.classList.add('active');
+  const selectedModelExists = modelListCache.some(model => model.id === selectedModel);
+  if ((!selectedModel || !selectedModelExists) && modelListCache.length > 0 && canSelectModel) {
+    const defaultModel = modelListCache.find(model => model.isDefault) || modelListCache[0];
+    await window.polishAPI.setConfig('commercial.selectedModel', defaultModel.id);
+    const defaultIndex = modelListCache.findIndex(model => model.id === defaultModel.id);
+    const rows = container.querySelectorAll('.model-row');
+    if (rows[defaultIndex]) {
+      rows[defaultIndex].classList.add('active');
+      rows[defaultIndex].setAttribute('aria-pressed', 'true');
+    }
   }
 }
 
@@ -495,16 +573,13 @@ function renderPlansGrid(status) {
           const provider = paymentProviders.includes('wechatpay') ? 'wechatpay' : 'alipay';
           const res = await window.polishAPI.createCommercialOrder(provider, planId);
           if (res.checkoutUrl) {
-            // 优先用本地后端地址打开支付页，避免公网不可达
-            const backendUrl = $('#commercialBackendUrl')?.value || 'http://127.0.0.1:8787';
-            const checkoutPath = new URL(res.checkoutUrl).pathname;
-            const localCheckoutUrl = backendUrl + checkoutPath;
-            window.polishAPI.openExternal(localCheckoutUrl);
+            window.polishAPI.openExternal(res.checkoutUrl);
             const statusEl = $('#commercialAccountStatus');
             if (statusEl) showStatus(statusEl, '已打开支付页面，正在等待支付结果…', 'success');
 
             // 自动轮询订单状态
-            if (res.orderId) {
+            const orderId = res.order?.id || res.orderId;
+            if (orderId) {
               let pollCount = 0;
               const maxPolls = 60; // 最多轮询3分钟 (每3秒一次)
               const pollTimer = setInterval(async () => {
@@ -515,12 +590,12 @@ function renderPlansGrid(status) {
                   return;
                 }
                 try {
-                  const orderRes = await window.polishAPI.getCommercialOrder(res.orderId);
+                  const orderRes = await window.polishAPI.getCommercialOrder(orderId);
                   if (orderRes?.order?.status === 'paid') {
                     clearInterval(pollTimer);
                     if (statusEl) showStatus(statusEl, '支付成功！积分已到账。', 'success');
                     // 刷新账户状态
-                    const freshStatus = await window.polishAPI.getCommercialStatus();
+                    const freshStatus = await window.polishAPI.refreshCommercialStatus();
                     if (freshStatus) renderCommercialStatus(freshStatus);
                   }
                 } catch (_e) { /* ignore poll errors */ }
@@ -627,6 +702,7 @@ function renderCommercialStatus(status) {
   $('#btnCommercialLogout').disabled = !loggedIn;
 
   updateHomeCommercialSummary(status);
+  loadCheckinStatus();
 }
 
 function startCodeCooldown(seconds) {
@@ -672,13 +748,24 @@ async function saveCommercialPreference(overrides = {}) {
 
 // ── Load config ──
 async function loadConfig() {
-  const [config, { presets, order }, toolbarStatus, initialCommercialStatus, initialUpdateStatus] = await Promise.all([
-    window.polishAPI.getConfig(),
-    window.polishAPI.getPresets(),
-    window.polishAPI.getToolbarStatus(),
-    window.polishAPI.getCommercialStatus(),
-    window.polishAPI.getUpdateStatus(),
-  ]);
+  let config, presetsData_, order, toolbarStatus, initialCommercialStatus, initialUpdateStatus;
+  try {
+    [config, { presets: presetsData_, order }, toolbarStatus, initialCommercialStatus, initialUpdateStatus] = await Promise.all([
+      window.polishAPI.getConfig(),
+      window.polishAPI.getPresets(),
+      window.polishAPI.getToolbarStatus(),
+      window.polishAPI.getCommercialStatus(),
+      window.polishAPI.getUpdateStatus(),
+    ]);
+  } catch (err) {
+    console.error('[settings] loadConfig failed:', err);
+    const errorDiv = document.createElement('div');
+    errorDiv.style.cssText = 'padding:40px;text-align:center;color:#ff3b30;';
+    errorDiv.textContent = `设置加载失败：${err.message}。请重启应用后重试。`;
+    document.body.innerHTML = '';
+    document.body.appendChild(errorDiv);
+    return;
+  }
 
   let commercialStatus = initialCommercialStatus;
   if (
@@ -696,14 +783,14 @@ async function loadConfig() {
     }
   }
 
-  presetsData = presets;
+  presetsData = presetsData_;
   presetOrder = order;
 
   // Populate preset dropdown
   const select = $('#presetSelect');
   select.innerHTML = '';
   for (const id of presetOrder) {
-    const p = presets[id];
+    const p = presetsData[id];
     if (!p) continue;
     const opt = document.createElement('option');
     opt.value = id;
@@ -738,6 +825,7 @@ async function loadConfig() {
   const mode = config.pipeline?.mode || 'single';
   const modeRadio = $(`input[name="pipelineMode"][value="${mode}"]`);
   if (modeRadio) modeRadio.checked = true;
+  $('#multipleVersionsEnabled').checked = config.ui?.multipleVersionsEnabled !== false;
 
   const temp = config.pipeline?.temperature ?? 0.3;
   $('#temperature').value = Math.round(temp * 10);
@@ -749,18 +837,17 @@ async function loadConfig() {
 
   renderToolbarStatus(toolbarStatus);
   renderCommercialStatus(commercialStatus);
-  loadCheckinStatus();
   renderUpdateStatus(initialUpdateStatus);
   $('#commercialBackendUrl').value = commercialStatus?.backendUrl || config.commercial?.backendUrl || 'http://127.0.0.1:8787';
   $('#commercialEnabled').checked = commercialStatus?.enabled !== false;
-  $('#aboutVersion').textContent = String(config.appVersion || '1.6.1');
+  $('#aboutVersion').textContent = String(config.appVersion || '1.6.2');
 
   // ── Home tab status ──
   const shortcutHome = config.shortcut || 'CommandOrControl+Alt+V';
   $('#homeShortcut').textContent = formatShortcut(shortcutHome);
 
   const homePresetId = config.provider?.preset || 'together';
-  const homePreset = presets[homePresetId];
+  const homePreset = presetsData[homePresetId];
   $('#homePreset').textContent = homePreset?.name || homePresetId;
 
   const homeToolbar = config.ui?.floatingToolbarEnabled !== false;
@@ -769,6 +856,7 @@ async function loadConfig() {
   const taskLabels = { polish: '润色', deai: '降AIGC' };
   const homeTaskId = normalizeTask(config.pipeline?.task || 'polish');
   $('#homeTask').textContent = taskLabels[homeTaskId] || homeTaskId;
+  $('#homeVariants').textContent = config.ui?.multipleVersionsEnabled !== false ? '已开启' : '已关闭';
   updateHomeCommercialSummary(commercialStatus);
 }
 
@@ -830,7 +918,10 @@ $('#btnTest').addEventListener('click', async () => {
 
 // ── Save shortcut ──
 $('#btnSaveShortcut').addEventListener('click', async () => {
-  if (!pendingAccelerator) return;
+  if (!pendingAccelerator) {
+    showStatus($('#shortcutStatus'), '请先点击录入框并按下组合键', 'error');
+    return;
+  }
   const status = $('#shortcutStatus');
   const result = await window.polishAPI.setShortcut(pendingAccelerator);
   if (!result?.success) {
@@ -838,16 +929,34 @@ $('#btnSaveShortcut').addEventListener('click', async () => {
     return;
   }
 
-  const display = formatShortcut(pendingAccelerator);
+  const display = formatShortcut(result.accelerator || pendingAccelerator);
   $('#currentShortcut').textContent = display;
   $('#homeShortcut').textContent = display;
 
   pendingAccelerator = null;
-  $('#shortcutCapture').classList.remove('captured');
-  $('#shortcutCapture').textContent = '点击此处，然后按下快捷键…';
+  shortcutCapture.classList.remove('captured', 'is-listening');
+  shortcutCapture.textContent = '点击此处，然后按下快捷键…';
   $('#btnSaveShortcut').disabled = true;
 
   showStatus(status, '快捷键已更新', 'success');
+});
+
+$('#btnResetShortcut').addEventListener('click', async () => {
+  const recommended = 'CommandOrControl+Alt+V';
+  const status = $('#shortcutStatus');
+  const result = await window.polishAPI.setShortcut(recommended);
+  if (!result?.success) {
+    showStatus(status, result?.error || '推荐快捷键当前被其他应用占用', 'error');
+    return;
+  }
+  const display = formatShortcut(result.accelerator || recommended);
+  $('#currentShortcut').textContent = display;
+  $('#homeShortcut').textContent = display;
+  pendingAccelerator = null;
+  shortcutCapture.classList.remove('captured', 'is-listening');
+  shortcutCapture.textContent = '点击此处，然后按下快捷键…';
+  $('#btnSaveShortcut').disabled = true;
+  showStatus(status, `已恢复为 ${display}`, 'success');
 });
 
 $('#floatingToolbarEnabled').addEventListener('change', async (e) => {
@@ -856,6 +965,13 @@ $('#floatingToolbarEnabled').addEventListener('change', async (e) => {
   const result = await window.polishAPI.setToolbarEnabled(next);
   renderToolbarStatus(result);
   showStatus(status, next ? '浮窗已启用' : '浮窗已关闭', 'success');
+});
+
+$('#multipleVersionsEnabled').addEventListener('change', async (event) => {
+  const enabled = event.target.checked;
+  await window.polishAPI.setConfig('ui.multipleVersionsEnabled', enabled);
+  $('#homeVariants').textContent = enabled ? '已开启' : '已关闭';
+  showStatus($('#generalStatus'), enabled ? '多版本建议已开启' : '多版本建议已关闭', 'success');
 });
 
 $('#btnRefreshToolbarStatus').addEventListener('click', async () => {
@@ -869,6 +985,20 @@ $('#btnOpenAccessibility').addEventListener('click', async () => {
   showStatus(status, '正在打开系统设置...', '');
   const result = await window.polishAPI.openAccessibilitySettings();
   renderToolbarStatus(result);
+});
+
+$('#btnTestToolbar').addEventListener('click', async () => {
+  const status = $('#generalStatus');
+  const result = await window.polishAPI.testToolbar();
+  showStatus(
+    status,
+    result?.ok ? '测试浮窗已显示在鼠标附近，请点击“润色”验证交互' : '测试浮窗未能显示',
+    result?.ok ? 'success' : 'error',
+  );
+});
+
+$('#btnRestartOnboarding').addEventListener('click', () => {
+  window.polishAPI.openOnboarding();
 });
 
 $('#btnSaveCommercialSettings').addEventListener('click', async () => {
@@ -970,41 +1100,43 @@ $('#btnCommercialLogout').addEventListener('click', async () => {
   }
 });
 
+$('#btnJumpToPlans')?.addEventListener('click', () => {
+  const plans = $('#plansSection');
+  if (!plans) return;
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  plans.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'start' });
+  plans.classList.add('plans-section-highlight');
+  window.setTimeout(() => plans.classList.remove('plans-section-highlight'), 900);
+});
+
 // ── Daily Check-in ──
 async function loadCheckinStatus() {
+  if (!commercialStatusCache?.loggedIn) {
+    $('#btnCheckin').disabled = true;
+    $('#btnCheckin').textContent = '登录后签到';
+    $('#checkinHint').textContent = '登录后每日可领取 1 积分';
+    $('#checkinStatusDot').classList.remove('checked');
+    return;
+  }
+  const accountId = commercialStatusCache.userId;
   try {
     const data = await window.polishAPI.getCheckinStatus();
-    if (!data || !data.ok) return;
+    if (!data || !data.ok || !commercialStatusCache?.loggedIn || commercialStatusCache.userId !== accountId) return;
     const btn = $('#btnCheckin');
     const hint = $('#checkinHint');
-    const days = document.querySelectorAll('.checkin-day');
-    const checkedDays = Math.max(0, Number(data.checkedDays || data.currentStreak || 0));
+    const dot = $('#checkinStatusDot');
 
     if (data.checkedInToday) {
       btn.disabled = true;
       btn.textContent = '今日已签到 ✓';
+      dot.classList.add('checked');
+      hint.textContent = '今日已领取 1 积分，明日可再次签到';
     } else {
       btn.disabled = false;
       btn.textContent = '签到领 +1 积分';
+      dot.classList.remove('checked');
+      hint.textContent = '今日未签到，点击领取 1 积分';
     }
-
-    // Highlight checked days
-    days.forEach(d => {
-      const day = Number(d.dataset.day);
-      d.classList.remove('checked', 'today');
-      if (day <= checkedDays) {
-        d.classList.add('checked');
-      }
-      if (data.checkedInToday && day === Math.max(1, checkedDays)) {
-        d.classList.add('today');
-      } else if (!data.checkedInToday && day === Math.min(7, checkedDays + 1)) {
-        d.classList.add('today');
-      }
-    });
-
-    hint.textContent = data.checkedInToday
-      ? '今日已签到，已领取 1 积分'
-      : '每天签到可领取 1 积分';
   } catch (_) { /* not logged in */ }
 }
 
@@ -1015,9 +1147,9 @@ $('#btnCheckin').addEventListener('click', async () => {
   try {
     const result = await window.polishAPI.checkin();
     if (result.ok) {
-      hint.textContent = result.message;
+      hint.textContent = result.message || '签到成功，1 积分已到账';
       btn.textContent = '今日已签到 ✓';
-      loadCheckinStatus();
+      await loadCheckinStatus();
       // Refresh account to update credit balance
       const refreshed = await window.polishAPI.refreshCommercialStatus();
       if (refreshed) renderCommercialStatus(refreshed);
@@ -1043,6 +1175,7 @@ $('#btnSaveGeneral').addEventListener('click', async () => {
   await window.polishAPI.setConfig('pipeline.genre', genre);
   await window.polishAPI.setConfig('pipeline.mode', mode);
   await window.polishAPI.setConfig('pipeline.temperature', temp);
+  await window.polishAPI.setConfig('ui.multipleVersionsEnabled', $('#multipleVersionsEnabled').checked);
   $('#homeTask').textContent = ({ polish: '润色', deai: '降AIGC' }[task]) || task;
   showStatus(status, '已保存', 'success');
 });
@@ -1061,7 +1194,7 @@ $('#btnSavePrompts').addEventListener('click', async () => {
 // ── Author link ──
 $('#authorLink').addEventListener('click', (e) => {
   e.preventDefault();
-  window.polishAPI.openExternal('https://www.xiaohongshu.com/user/profile/5baad820f7e8b908db85cf62');
+  window.polishAPI.openExternal(e.currentTarget.href);
 });
 
 $('#btnCheckUpdates').addEventListener('click', async () => {
@@ -1084,14 +1217,19 @@ $('#btnCheckUpdates').addEventListener('click', async () => {
   }
 });
 
-$('#btnOpenLatestRelease').addEventListener('click', async () => {
+$('#btnInstallUpdate').addEventListener('click', async () => {
+  const button = $('#btnInstallUpdate');
+  button.disabled = true;
+  button.textContent = '正在更新...';
   try {
-    await window.polishAPI.openLatestRelease();
+    await window.polishAPI.installUpdate();
   } catch (err) {
     renderUpdateStatus({
       ...(updateStatusCache || {}),
       lastError: err.message,
     });
+    button.disabled = false;
+    button.textContent = '立即更新';
   }
 });
 

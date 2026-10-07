@@ -1,8 +1,19 @@
 {
-  "version": "1.6.1",
-  "name": "润石 PoliShit 1.6.1",
-  "publishedAt": "2026-05-06T00:00:00.000Z",
-  "notes": "修复 Word 原位批阅写回与结果窗状态提示，修正积分包默认方案，更新官网、下载入口与技术报告。",
-  "pageUrl": "https://www.runshi.top/",
-  "downloadUrl": "https://github.com/Choras4ai/polishit/releases/tag/v1.6.1"
+  "version": "1.6.11",
+  "name": "润石 PoliShit 1.6.11",
+  "publishedAt": "2026-10-05T09:40:18.701778+00:00",
+  "notes": "Mac Word 分析完成后自动显示原文下划线与悬停建议，可直接接受、忽略。修复接受全部首条写入后误判失败；显示逐条进度，失败保持待处理，保留已忽略建议。Word 已开启原生修订时，在写入前提示关闭后重试。250 项回归、真实 Mac Word 多段批量写回与修订模式保护通过。",
+  "pageUrl": "https://www.runshi.top/#download",
+  "downloads": {
+    "darwin-arm64": "https://www.runshi.top/downloads/runshi-polis-1.6.11-arm64.dmg",
+    "win32-x64": "https://www.runshi.top/downloads/runshi-polis-setup-1.6.11.exe"
+  },
+  "sha256": {
+    "darwin-arm64": "dc97c42f75fe85848eff432569805f6dde078eedcb79b01138d26cf6b4ce5c0a",
+    "win32-x64": "f9000ddc8bedc479a9de55f7674f685536a85b2c7991e3902c86f345cf9cbed8"
+  },
+  "sizes": {
+    "darwin-arm64": 134740749,
+    "win32-x64": 115301235
+  }
 }

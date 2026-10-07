@@ -6,13 +6,14 @@ const PROXY_TIMEOUT_BUFFER_MS = 30_000;
 
 const LARGE_MODEL_IDS = new Set([
   'qwen3.5-397b',
-  'glm-5.1',
   'minimax-m2.5',
 ]);
 
 const LARGE_MODEL_PATTERNS = [
   /Qwen\/Qwen3\.5-397B-A17B/i,
-  /GLM-5\.1/i,
+  /(?:^|\/)GLM-5(?:\.\d+)?(?:$|[-_])/i,
+  /(?:^|\/)Kimi-K2(?:\.\d+)?(?:$|[-_])/i,
+  /(?:^|\/)DeepSeek-V4-Pro(?:$|[-_])/i,
   /MiniMax-M2\.5/i,
 ];
 
@@ -23,12 +24,12 @@ function normalizeTimeoutMs(value) {
 }
 
 function isLongRunningModel({ model = '', modelId = '' } = {}) {
-  if (LARGE_MODEL_IDS.has(String(modelId || '').trim())) {
+  if (LARGE_MODEL_IDS.has(String(modelId || '').trim().toLowerCase())) {
     return true;
   }
 
-  const modelName = String(model || '').trim();
-  return LARGE_MODEL_PATTERNS.some((pattern) => pattern.test(modelName));
+  return [model, modelId].some((name) =>
+    LARGE_MODEL_PATTERNS.some((pattern) => pattern.test(String(name || '').trim())));
 }
 
 function getChatTimeoutMs({ model = '', modelId = '', requestedTimeoutMs } = {}) {

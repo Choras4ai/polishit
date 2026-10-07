@@ -4,9 +4,13 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
-const ENV_FILE = path.join(ROOT, '.env');
-if (process.env.RUNSHI_LOAD_DOTENV !== '0' && fs.existsSync(ENV_FILE)) {
-  require('dotenv').config({ path: ENV_FILE });
+const ENV_FILES = [
+  path.join(ROOT, '.env'),
+  path.join(__dirname, '.env'),
+];
+if (process.env.RUNSHI_LOAD_DOTENV !== '0') {
+  const envFile = ENV_FILES.find(filePath => fs.existsSync(filePath));
+  if (envFile) require('dotenv').config({ path: envFile, quiet: true });
 }
 
 function numberFromEnv(name, fallback) {
@@ -20,9 +24,17 @@ function booleanFromEnv(name, fallback = false) {
   return ['1', 'true', 'yes', 'on'].includes(String(value).trim().toLowerCase());
 }
 
+const host = process.env.RUNSHI_SERVER_HOST || '127.0.0.1';
+const isProduction = process.env.NODE_ENV === 'production' || !['127.0.0.1', 'localhost', '::1'].includes(host);
+
 module.exports = {
+  isProduction,
   host: process.env.RUNSHI_SERVER_HOST || '127.0.0.1',
+  trustProxy: process.env.RUNSHI_TRUST_PROXY || 'loopback',
   port: numberFromEnv('RUNSHI_SERVER_PORT', 8787),
+  adminUsername: process.env.RUNSHI_ADMIN_USERNAME || 'runshi_admin',
+  adminPasswordHash: process.env.RUNSHI_ADMIN_PASSWORD_HASH || '',
+  // Kept only for local/backward compatibility. Production should use the scrypt hash above.
   adminPassword: process.env.RUNSHI_ADMIN_PASSWORD || '',
   dbPath: process.env.RUNSHI_SERVER_DB || path.join(ROOT, 'data', 'commercial.sqlite3'),
   publicBaseUrl: (process.env.RUNSHI_PUBLIC_BASE_URL || 'http://127.0.0.1:8787').replace(/\/+$/, ''),
@@ -30,7 +42,7 @@ module.exports = {
     .split(',')
     .map(item => item.trim())
     .filter(Boolean),
-  smsProvider: process.env.RUNSHI_SMS_PROVIDER || 'mock',
+  smsProvider: process.env.RUNSHI_SMS_PROVIDER || (isProduction ? 'disabled' : 'mock'),
   universalTestCode: process.env.RUNSHI_TEST_CODE || '',
   codeTtlMinutes: numberFromEnv('RUNSHI_CODE_TTL_MINUTES', 5),
   resendCooldownSeconds: numberFromEnv('RUNSHI_CODE_RESEND_SECONDS', 60),
@@ -39,7 +51,7 @@ module.exports = {
   trial: {
     freeUsesTotal: numberFromEnv('RUNSHI_TRIAL_FREE_USES', 0),
   },
-  paymentMode: process.env.RUNSHI_PAYMENT_MODE || 'manual',
+  paymentMode: process.env.RUNSHI_PAYMENT_MODE || (isProduction ? 'online' : 'manual'),
   membership: {
     defaultPlanId: process.env.RUNSHI_MEMBERSHIP_PLAN_ID || 'runshi-basic',
     planName: process.env.RUNSHI_MEMBERSHIP_PLAN_NAME || '基础积分包',
@@ -86,6 +98,7 @@ module.exports = {
     privateKeyPath: process.env.RUNSHI_WECHATPAY_PRIVATE_KEY_PATH || '',
     platformPublicKey: process.env.RUNSHI_WECHATPAY_PLATFORM_PUBLIC_KEY || '',
     platformPublicKeyPath: process.env.RUNSHI_WECHATPAY_PLATFORM_PUBLIC_KEY_PATH || '',
+    publicKeyId: process.env.RUNSHI_WECHATPAY_PUBLIC_KEY_ID || '',
     apiV3Key: process.env.RUNSHI_WECHATPAY_API_V3_KEY || '',
     notifyPath: process.env.RUNSHI_WECHATPAY_NOTIFY_PATH || '/api/pay/callback/wechat',
   },

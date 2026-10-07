@@ -6,8 +6,8 @@
   --text-secondary: #6e6e73;
   --text-tertiary: #aeaeb2;
   --border: rgba(0, 0, 0, 0.08);
-  --accent: #007aff;
-  --accent-hover: #0066d6;
+  --accent: #4A7C6B;
+  --accent-hover: #3d6a5b;
   --success: #34c759;
   --danger: #ff3b30;
   --hover-bg: rgba(0, 0, 0, 0.04);
@@ -53,6 +53,9 @@ body {
 .step {
   display: none;
   padding: 0 32px 32px;
+  height: calc(100vh - 38px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   animation: fadeIn 0.25s ease;
 }
 
@@ -106,10 +109,18 @@ body {
 }
 
 .feature-icon {
-  font-size: 22px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: rgba(74,124,107,.1);
+  color: var(--accent);
   flex-shrink: 0;
-  margin-top: 2px;
+  margin-top: 1px;
 }
+.feature-icon svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.feature-icon svg path:first-child:last-child { fill: currentColor; stroke: none; }
 
 .feature-name {
   font-weight: 600;
@@ -150,6 +161,19 @@ body {
 
 .btn-primary:hover {
   background: var(--accent-hover);
+}
+
+.btn-secondary {
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text);
+}
+
+.btn-secondary:hover {
+  border-color: rgba(74, 124, 107, 0.35);
+  color: var(--accent);
 }
 
 .btn-large {
@@ -220,23 +244,29 @@ body {
   border-radius: var(--radius);
   cursor: pointer;
   transition: all 0.15s;
+  width: 100%;
+  color: var(--text);
+  font-family: var(--font);
+  text-align: left;
 }
 
 .provider-card:hover {
-  border-color: rgba(0, 122, 255, 0.3);
+  border-color: rgba(74, 124, 107, 0.3);
 }
 
 .provider-card.selected {
   border-color: var(--accent);
-  background: rgba(0, 122, 255, 0.04);
+  background: rgba(74, 124, 107, 0.06);
 }
 
 .provider-card .provider-name {
+  display: block;
   font-weight: 600;
   font-size: 14px;
 }
 
 .provider-card .provider-desc {
+  display: block;
   font-size: 11px;
   color: var(--text-secondary);
 }
@@ -296,8 +326,16 @@ body {
 }
 
 .ready-icon {
-  font-size: 48px;
-  margin-bottom: 12px;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 12px;
+  border-radius: 18px;
+  background: rgba(74,124,107,.12);
+  color: var(--accent);
+  font-size: 30px;
+  font-weight: 800;
 }
 
 .ready-title {
@@ -347,4 +385,67 @@ body {
 .tip-item {
   font-size: 13px;
   color: var(--text-secondary);
+}
+
+/* ── Core setup ── */
+.setup-header { margin-bottom: 16px; }
+.step-kicker {
+  display: block;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: .06em;
+  margin: 7px 0 2px;
+}
+.setup-card {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-card);
+  box-shadow: 0 12px 32px rgba(44,81,67,.06);
+}
+.setup-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 13px 15px;
+  border-bottom: 1px solid var(--border);
+}
+.setup-row:last-child { border-bottom: 0; }
+.setup-row strong { display: block; font-size: 13px; margin-bottom: 2px; }
+.setup-row p { color: var(--text-secondary); font-size: 11px; }
+.setup-badge {
+  flex: 0 0 auto;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: var(--hover-bg);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+}
+.setup-badge.success { background: rgba(74,124,107,.12); color: var(--accent); }
+.setup-badge.warning { background: rgba(255,149,0,.12); color: #9c5a06; }
+.setup-badge.error { background: rgba(255,59,48,.1); color: var(--danger); }
+.setup-message {
+  min-height: 38px;
+  margin: 12px 0 10px;
+  padding: 9px 11px;
+  border-radius: 9px;
+  background: var(--hover-bg);
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.setup-message.success { background: rgba(74,124,107,.09); color: var(--accent); }
+.setup-message.warning { background: rgba(255,149,0,.08); color: #8f560a; }
+.setup-message.error { background: rgba(255,59,48,.08); color: var(--danger); }
+.setup-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.setup-footnote {
+  margin: 9px 0 14px;
+  color: var(--text-tertiary);
+  font-size: 11px;
 }

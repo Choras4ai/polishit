@@ -99,12 +99,21 @@ class CostGuard {
    * Estimate cost of a call based on input/output tokens and model pricing.
    * @param {number} inputTokens
    * @param {number} outputTokens
-   * @param {object} model - Model definition with inputPrice/outputPrice (per 1K tokens, in yuan)
+   * @param {object} model - Model definition with prices per 1M tokens (legacy per-1K fields also supported)
    * @returns {number} Estimated cost in yuan
    */
   estimateCost(inputTokens, outputTokens, model) {
-    const inputCost = (inputTokens / 1000) * (model.inputPrice || 0.002);
-    const outputCost = (outputTokens / 1000) * (model.outputPrice || 0.003);
+    const hasPerMillion = Number.isFinite(Number(model?.inputPricePerMTokens))
+      || Number.isFinite(Number(model?.outputPricePerMTokens));
+    const divisor = hasPerMillion ? 1_000_000 : 1000;
+    const inputPrice = hasPerMillion
+      ? (Number(model?.inputPricePerMTokens) || 0)
+      : (Number(model?.inputPrice) || 0.002);
+    const outputPrice = hasPerMillion
+      ? (Number(model?.outputPricePerMTokens) || 0)
+      : (Number(model?.outputPrice) || 0.003);
+    const inputCost = (inputTokens / divisor) * inputPrice;
+    const outputCost = (outputTokens / divisor) * outputPrice;
     return inputCost + outputCost;
   }
 

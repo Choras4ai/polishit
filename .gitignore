@@ -20,6 +20,15 @@ pnpm-debug.log*
 *.exe
 *.blockmap
 data/
+/build/
+/native/bin/*.node
+
+# 支付密钥与证书：严禁提交
+*.pem
+*.p12
+*.pfx
+server/keys/
+keys/
 
 # 内部材料：参赛/白皮书/演示稿等私人文件，不公开
 docs/*.docx
@@ -31,3 +40,11 @@ docs/downloads/
 # 个人本地工作目录占位
 /electron
 /runshi@*
+
+# 本地审计证据、历史备份和私人材料
+/audit/
+/archive/
+/.lab-*.png
+/*.docx
+/integrations/ai-course/reference/
+/integrations/dist/

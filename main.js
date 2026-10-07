@@ -3,8 +3,8 @@
 const { app, ipcMain, clipboard, shell, systemPreferences, Notification } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const os = require('os');
-const { spawn, spawnSync } = require('child_process');
+const { spawn } = require('child_process');
+const dotenv = require('dotenv');
 const ConfigStore = require('./src/config');
 const WindowManager = require('./src/windows');
 const ShortcutManager = require('./src/shortcuts');
@@ -14,16 +14,28 @@ const { CommercialClient, COMMERCIAL_AVAILABLE } = require('./src/commercial');
 const { UpdateManager } = require('./src/updater');
 const {
   captureSelectedText,
+  probeWordSelectionContext,
   pasteText,
   applyTextEdit,
   getLastTextFieldBounds,
   getLastSelectionContext,
+  restoreFrontApp,
+  reviewSourceGeometry,
 } = require('./src/capture');
+const { SourceReview } = require('./src/source-review');
 const { AgentPipeline } = require('./src/ai/pipeline');
 const { createProvider } = require('./src/ai/provider-factory');
 const { PRESETS, PRESET_ORDER } = require('./src/ai/presets');
+const { normalizeReviewChange, isReviewChangeApplicable, restoreReplacement } = require('./src/review-state');
 
 const isMac = process.platform === 'darwin';
+const ROOT_ENV_PATH = path.join(__dirname, '.env');
+const rootEnvParsed = process.env.RUNSHI_LOAD_DOTENV === '0' ? {} : (dotenv.config({ path: ROOT_ENV_PATH, quiet: true }).parsed || {});
+for (const [key, value] of Object.entries(rootEnvParsed)) {
+  if (process.env[key] == null || process.env[key] === '') {
+    process.env[key] = value;
+  }
+}
 
 // ── Single instance lock ──
 if (!app.requestSingleInstanceLock()) {
@@ -37,6 +49,7 @@ const commercialClient = new CommercialClient(config);
 let windowManager, shortcutManager, trayManager, selectionWatcher, updateManager;
 let isProcessing = false;
 let localServerProcess = null;
+let localServerSpawning = null; // Promise lock to prevent concurrent spawns
 let lastOriginalText = '';
 let lastAppliedReplacement = null;
 let lastSelectionEditSession = null;
@@ -45,6 +58,14 @@ let lastFieldBounds = null;
 let lastSelectionSnapshot = null;
 let pendingToolbarSnapshot = null;
 let toolbarShowTimer = null;
+let activeRunToken = 0;
+let pendingRecaptureRequest = false;
+let toolbarTestMode = false;
+let sourceReview = null;
+let sourceReviewData = null;
+
+const DEFAULT_SELECTION_CACHE_MAX_AGE_MS = 8000;
+const MANUAL_REFRESH_SELECTION_CACHE_MAX_AGE_MS = 60000;
 
 function isLoopbackBackendUrl(rawUrl) {
   try {
@@ -67,34 +88,8 @@ function getEmbeddedServerCwd() {
 }
 
 function resolveNodeExecutable() {
-  const candidates = [
-    process.env.RUNSHI_NODE_PATH,
-    process.env.NODE_BINARY,
-    path.join(os.homedir(), 'local', 'node', 'bin', 'node'),
-    '/opt/homebrew/bin/node',
-    '/usr/local/bin/node',
-    '/usr/bin/node',
-    'node',
-  ].filter(Boolean);
-
-  for (const candidate of candidates) {
-    try {
-      const result = spawnSync(candidate, ['-v'], {
-        encoding: 'utf8',
-        timeout: 3000,
-      });
-      const versionText = String(result.stdout || result.stderr || '').trim();
-      const match = versionText.match(/^v(\d+)\./i);
-      const major = match ? Number(match[1]) : 0;
-      if (result.status === 0 && major >= 20) {
-        return candidate;
-      }
-    } catch (_) {
-      // Try next candidate.
-    }
-  }
-
-  return '';
+  // The packaged Electron binary provides Node; users need no separate install.
+  return process.execPath;
 }
 
 async function waitForLocalServer(baseUrl, timeoutMs = 15000) {
@@ -127,41 +122,71 @@ async function ensureLocalCommercialServer() {
     // Local server is not running yet; try to spawn it.
   }
 
-  const entry = getEmbeddedServerEntry();
-  if (!fs.existsSync(entry)) {
-    console.error(`[runshi] local server entry missing: ${entry}`);
-    return false;
+  // Prevent concurrent spawn attempts
+  if (localServerSpawning) {
+    try { return await localServerSpawning; } catch (_) { /* fall through to re-spawn */ }
   }
 
-  const nodeExecutable = resolveNodeExecutable();
-  if (!nodeExecutable) {
-    console.error('[runshi] no usable Node.js executable found for local server');
-    return false;
-  }
-  console.log(`[runshi] using node executable for local server: ${nodeExecutable}`);
+  const spawnPromise = (async () => {
+    const entry = getEmbeddedServerEntry();
+    if (!fs.existsSync(entry)) {
+      console.error(`[runshi] local server entry missing: ${entry}`);
+      return false;
+    }
 
-  if (!localServerProcess || localServerProcess.exitCode != null) {
-    localServerProcess = spawn(nodeExecutable, [entry], {
-      cwd: getEmbeddedServerCwd(),
-      env: process.env,
-      stdio: 'ignore',
-      windowsHide: true,
-    });
+    const nodeExecutable = resolveNodeExecutable();
+    if (!nodeExecutable) {
+      console.error('[runshi] no usable Node.js executable found for local server');
+      return false;
+    }
+    console.log(`[runshi] using node executable for local server: ${nodeExecutable}`);
 
-    localServerProcess.on('exit', (code, signal) => {
-      if (code !== 0 && signal !== 'SIGTERM') {
-        console.error(`[runshi] local server exited unexpectedly: code=${code} signal=${signal || ''}`);
+    if (!localServerProcess || localServerProcess.exitCode != null) {
+      console.log('[runshi] spawning local server with RUNSHI_SILICONFLOW_API_KEY present:', Boolean(process.env.RUNSHI_SILICONFLOW_API_KEY));
+      localServerProcess = spawn(nodeExecutable, [entry], {
+        cwd: getEmbeddedServerCwd(),
+        env: {
+          ...process.env,
+          ELECTRON_RUN_AS_NODE: '1',
+          RUNSHI_SERVER_HOST: new URL(backendUrl).hostname,
+          RUNSHI_SERVER_PORT: new URL(backendUrl).port || '8787',
+          ...(app.isPackaged ? {
+            RUNSHI_LOAD_DOTENV: '0',
+            RUNSHI_SERVER_DB: path.join(app.getPath('userData'), 'data', 'commercial.sqlite3'),
+          } : {}),
+        },
+        stdio: 'ignore',
+        windowsHide: true,
+      });
+
+      localServerProcess.on('error', err => console.error('[runshi] local server process failed:', err.message));
+      localServerProcess.on('exit', (code, signal) => {
+        if (code !== 0 && signal !== 'SIGTERM') {
+          console.error(`[runshi] local server exited unexpectedly: code=${code} signal=${signal || ''}`);
+        }
+        localServerProcess = null;
+      });
+    }
+
+    try {
+      await waitForLocalServer(backendUrl);
+      return true;
+    } catch (err) {
+      console.error(`[runshi] local server failed to become healthy: ${err.message}`);
+      // Kill the dead process so next attempt can re-spawn
+      if (localServerProcess && localServerProcess.exitCode == null) {
+        localServerProcess.kill('SIGTERM');
+        localServerProcess = null;
       }
-      localServerProcess = null;
-    });
-  }
+      return false;
+    }
+  })();
 
+  localServerSpawning = spawnPromise;
   try {
-    await waitForLocalServer(backendUrl);
-    return true;
-  } catch (err) {
-    console.error(`[runshi] local server failed to become healthy: ${err.message}`);
-    return false;
+    return await spawnPromise;
+  } finally {
+    localServerSpawning = null;
   }
 }
 
@@ -200,6 +225,20 @@ app.whenReady().then(async () => {
   }
 
   windowManager = new WindowManager();
+  sourceReview = new SourceReview({ geometry: reviewSourceGeometry, getState: getSourceReviewState,
+    apply: (change, action, token) => withSourceEdit(async () => {
+      const state = getSourceReviewState();
+      if (!state || state.token !== token || !state.changes.some(c => c.id === change.id)) {
+        return { ok: false, error: '这组原文修订已经过期。' };
+      }
+      if (action === 'ignore') { sourceReviewData.ignored.add(change.id); return { ok: true }; }
+      return applyReviewChangeInSource(change, 'accept', { sourceOverlay: true });
+    }),
+    onDecision: event => windowManager.sendToResult('polish:source-decision', event),
+    onStatus: event => windowManager.sendToResult('polish:source-status', event),
+    openResult: () => windowManager.focusResult(),
+  });
+  windowManager.onResultClosed = () => sourceReview?.stop();
   shortcutManager = new ShortcutManager(config, handleTrigger);
   trayManager = new TrayManager(config, windowManager, shortcutManager, handleToolbarToggle);
   updateManager = new UpdateManager({ app, config });
@@ -226,6 +265,7 @@ app.whenReady().then(async () => {
   });
   selectionWatcher.start(
     (sel) => {
+      toolbarTestMode = false;
       const snapshot = {
         text: sel.text || '',
         rawText: sel.rawText || sel.text || '',
@@ -264,6 +304,7 @@ app.on('window-all-closed', () => {
 });
 
 app.on('will-quit', () => {
+  sourceReview?.destroy();
   shortcutManager?.unregisterAll();
   selectionWatcher?.stop();
   updateManager?.stop();
@@ -275,8 +316,18 @@ app.on('second-instance', () => {
   windowManager?.showHome();
 });
 
+// A tray-only macOS app receives `activate` (rather than `second-instance`)
+// when its Dock/Finder icon is opened again. Reopen the home window so users
+// are never left with an apparently unresponsive background process.
+app.on('activate', () => {
+  windowManager?.showHome();
+});
+
 // ── Shared pipeline runner (eliminates duplication across handlers) ──
 async function runPipeline(text, { task, progressPrefix, temperatureOverride, modelOverride } = {}) {
+  sourceReview?.stop(); sourceReviewData = null;
+  const runToken = ++activeRunToken;
+  const isActiveRun = () => runToken === activeRunToken;
   const currentTask = task || config.get('pipeline.task') || 'polish';
   windowManager.sendToResult('polish:task', currentTask);
   windowManager.sendToResult('polish:progress', { stage: progressPrefix || '正在分析文本...', percent: 5 });
@@ -302,71 +353,154 @@ async function runPipeline(text, { task, progressPrefix, temperatureOverride, mo
   }
 
   // Handle model override (for reprocessWithModel)
-  let prevModel;
-  if (modelOverride) {
-    prevModel = config.get('commercial.selectedModel');
-    config.set('commercial.selectedModel', modelOverride);
-    const modelList = await commercialClient.getModels();
-    const modelDef = modelList.find(m => m.id === modelOverride);
-    windowManager.sendToResult('polish:modelInfo', {
-      modelId: modelOverride,
-      modelName: modelDef?.name || modelOverride,
-      credits: modelDef?.credits || 0,
-      models: modelList,
-    });
-  }
-
-  // Handle temperature override (for regenerate)
-  let origTemp;
-  if (temperatureOverride != null) {
-    origTemp = config.get('pipeline.temperature') || 0.3;
-    config.set('pipeline.temperature', temperatureOverride);
-  }
-
   try {
-    const provider = createProvider(config.get('provider'), getCommercialProviderContext());
-    const pipeline = new AgentPipeline(provider, config);
+    if (commercialCtx) {
+      const modelList = await commercialClient.getModels();
+      let modelDef = modelList.find(m => m.id === (modelOverride || commercialCtx.selectedModel));
+      if (modelOverride && !modelDef) throw new Error('所选模型已下架，请刷新模型列表后重新选择。');
+      if (!modelDef) modelDef = modelList.find(m => m.isDefault) || modelList[0];
+      if (!modelDef) throw new Error('暂时无法获取可用模型，请稍后重试。');
+      commercialCtx.selectedModel = modelDef.id;
+      config.set('commercial.selectedModel', modelDef.id);
+      windowManager.sendToResult('polish:modelInfo', {
+        modelId: modelDef.id,
+        modelName: modelDef.name,
+        credits: modelDef.credits,
+        models: modelList,
+      });
+    }
+
+    const provider = createProvider(providerConfig, commercialCtx && {
+      ...commercialCtx,
+      selectedModel: modelOverride || commercialCtx.selectedModel,
+    });
+    const pipeline = new AgentPipeline(provider, config, { temperature: temperatureOverride });
     const result = await pipeline.process(text, (progress) => {
-      windowManager.sendToResult('polish:progress', progress);
+      if (isActiveRun()) windowManager.sendToResult('polish:progress', progress);
     }, currentTask);
 
+    if (!isActiveRun()) return;
+
     const { explainPromise, ...resultToSend } = result;
+    if (lastSelectionEditSession) {
+      sourceReviewData = { token: `${runToken}:${lastSelectionEditSession.createdAt}:${lastSelectionEditSession.generation}`,
+        session: lastSelectionEditSession, generation: lastSelectionEditSession.generation,
+        changes: (result.diff?.changes || []).filter(c => normalizeReviewChange(c)).map(c => ({ ...c })), ignored: new Set() };
+      resultToSend.sourceReviewToken = sourceReviewData.token;
+    }
     windowManager.sendToResult('polish:result', resultToSend);
     if (explainPromise) {
       explainPromise.then((explanations) => {
+        if (!isActiveRun()) return;
         if (explanations?.length) {
+          if (sourceReviewData?.session === lastSelectionEditSession) {
+            // Pipeline updates its own change objects with the matched reasons.
+            for (const change of sourceReviewData.changes) {
+              const explained = result.diff.changes.find(c => c.id === change.id);
+              if (explained) Object.assign(change, { reason: explained.reason, errorType: explained.errorType });
+            }
+          }
           windowManager.sendToResult('polish:explanations', { explanations, changes: result.diff.changes });
         }
         windowManager.sendToResult('polish:progress', { stage: '完成', percent: 100 });
-      }).catch(() => {});
+      }).catch((err) => { console.error('[runshi] explainPromise error:', err.message); });
     }
 
     await refreshCommercialAccount();
-  } finally {
-    if (origTemp != null) config.set('pipeline.temperature', origTemp);
+    return result;
+  } catch (err) {
+    if (!isActiveRun()) return;
+    throw err;
   }
+}
+
+async function generateAlternativeVersions(text, task, primaryText, runToken) {
+  if (config.get('ui.multipleVersionsEnabled') === false) return;
+  if (runToken !== activeRunToken) return;
+  const baseTemperature = Number(config.get('pipeline.temperature') ?? 0.3);
+  const temperatures = [Math.max(0.45, baseTemperature + 0.2), Math.min(0.9, Math.max(0.65, baseTemperature + 0.4))];
+  const seen = new Set([String(primaryText || '').trim()]);
+  let delivered = 0;
+
+  windowManager.sendToResult('polish:variant-progress', {
+    enabled: true,
+    current: 0,
+    total: temperatures.length,
+    done: false,
+  });
+
+  for (let index = 0; index < temperatures.length; index += 1) {
+    if (runToken !== activeRunToken) return;
+    try {
+      const provider = createProvider(config.get('provider'), getCommercialProviderContext());
+      const pipeline = new AgentPipeline(provider, config, { temperature: temperatures[index] });
+      const result = await pipeline.process(text, () => {}, task, { skipExplanations: true });
+      if (runToken !== activeRunToken) return;
+      const normalized = String(result?.polishedText || '').trim();
+      if (normalized && !seen.has(normalized)) {
+        seen.add(normalized);
+        delivered += 1;
+        windowManager.sendToResult('polish:variant', {
+          ...result,
+          variantIndex: delivered,
+        });
+      }
+      windowManager.sendToResult('polish:variant-progress', {
+        enabled: true,
+        current: index + 1,
+        total: temperatures.length,
+        done: index === temperatures.length - 1,
+      });
+    } catch (err) {
+      console.error('[runshi] alternative version failed:', err.message);
+      windowManager.sendToResult('polish:variant-progress', {
+        enabled: true,
+        current: index + 1,
+        total: temperatures.length,
+        done: true,
+        error: /积分|余额|credit/i.test(err.message) ? '积分不足，已保留当前方案' : '其他方案暂未生成',
+      });
+      break;
+    }
+  }
+}
+
+function runPendingRecaptureIfNeeded() {
+  if (!pendingRecaptureRequest || isProcessing || isApplyingSourceEdit) return;
+  pendingRecaptureRequest = false;
+  setImmediate(() => {
+    handleTrigger({
+      preferCachedSelection: true,
+      selectionCacheMaxAgeMs: MANUAL_REFRESH_SELECTION_CACHE_MAX_AGE_MS,
+    });
+  });
 }
 
 // ── Trigger handler ──
 async function handleTrigger(options = {}) {
-  if (isProcessing) return;
+  if (isProcessing || isApplyingSourceEdit) return;
+  sourceReview?.stop(); sourceReviewData = null;
   isProcessing = true;
   clearToolbarShowTimer();
   selectionWatcher?.pause();
 
   try {
-    const cachedSelection = getRecentSelectionSnapshot();
+    const cachedSelection = getRecentSelectionSnapshot(options.selectionCacheMaxAgeMs);
     const shouldUseCached = options.preferCachedSelection === true
       && cachedSelection
       && cachedSelection.text
       && cachedSelection.text.trim().length > 0
       && Boolean(cachedSelection.selectionContext);
-    const captureResult = shouldUseCached
+    let captureResult = shouldUseCached
       ? {
         text: cachedSelection.rawText || cachedSelection.text,
         selectionContext: cachedSelection.selectionContext || null,
       }
       : await captureSelectedText();
+    if (shouldUseCached && isWordBundleIdentifier(cachedSelection.selectionContext?.bundleIdentifier)) {
+      const context = await probeWordSelectionContext().catch(() => null);
+      captureResult = { text: context?.text || '', selectionContext: context };
+    }
     const text = typeof captureResult === 'string' ? captureResult : captureResult?.text;
     const anchorBounds = getResultAnchorBounds();
     const resultMetrics = estimateResultWindowMetrics(text, anchorBounds);
@@ -387,39 +521,60 @@ async function handleTrigger(options = {}) {
     windowManager.sendToResult('polish:reviewContext', {
       surgicalEditing: Boolean(lastSelectionEditSession),
       platform: process.platform,
+      writeMode: lastSelectionEditSession ? 'inline' : 'copy',
     });
 
-    await runPipeline(text);
+    const primaryResult = await runPipeline(text);
+    const activeTask = config.get('pipeline.task') || 'polish';
+    if (
+      activeTask === 'polish'
+      && primaryResult?.polishedText
+      && config.get('ui.multipleVersionsEnabled') !== false
+    ) {
+      const variantRunToken = activeRunToken;
+      Promise.resolve(primaryResult.explainPromise)
+        .catch(() => [])
+        .then(() => generateAlternativeVersions(text, activeTask, primaryResult.polishedText, variantRunToken))
+        .catch((err) => console.error('[runshi] background variants failed:', err.message));
+    }
   } catch (err) {
     lastSelectionEditSession = null;
-    windowManager.sendToResult('polish:error', `处理失败: ${err.message}`);
+    if (!pendingRecaptureRequest) {
+      windowManager.sendToResult('polish:error', `处理失败: ${err.message}`);
+    }
   } finally {
     isProcessing = false;
+    offerWordSourceReview();
     selectionWatcher?.resume();
+    runPendingRecaptureIfNeeded();
   }
 }
 
 async function sendCurrentModelInfo() {
-  const commercial = config.get('commercial') || {};
-  const commercialCtx = getCommercialProviderContext();
-  const modelId = commercialCtx ? (commercial.selectedModel || 'kimi-k2.5') : (config.get('provider.model') || 'unknown');
-  const modelList = commercialCtx ? await commercialClient.getModels() : [];
-  const modelDef = modelList.find(m => m.id === modelId);
-  windowManager.sendToResult('polish:modelInfo', {
-    modelId,
-    modelName: modelDef?.name || modelId,
-    credits: modelDef?.credits || 0,
-    models: modelList,
-  });
+  try {
+    const commercial = config.get('commercial') || {};
+    const commercialCtx = getCommercialProviderContext();
+    const modelList = commercialCtx ? await commercialClient.getModels() : [];
+    const modelDef = modelList.find(m => m.id === commercial.selectedModel) || modelList.find(m => m.isDefault) || modelList[0];
+    const modelId = commercialCtx ? (modelDef?.id || '') : (config.get('provider.model') || 'unknown');
+    windowManager.sendToResult('polish:modelInfo', {
+      modelId,
+      modelName: modelDef?.name || modelId,
+      credits: modelDef?.credits || 0,
+      models: modelList,
+    });
+  } catch (err) {
+    console.error('[runshi] sendCurrentModelInfo failed:', err.message);
+  }
 }
 
 function getResultAnchorBounds() {
   return lastSelectionAnchor || lastFieldBounds || getLastTextFieldBounds();
 }
 
-function getRecentSelectionSnapshot() {
+function getRecentSelectionSnapshot(maxAgeMs = DEFAULT_SELECTION_CACHE_MAX_AGE_MS) {
   if (!lastSelectionSnapshot) return null;
-  if (Date.now() - lastSelectionSnapshot.at > 8000) return null;
+  if (Date.now() - lastSelectionSnapshot.at > maxAgeMs) return null;
   return lastSelectionSnapshot;
 }
 
@@ -440,43 +595,79 @@ function isWordBundleIdentifier(bundleIdentifier) {
 }
 
 function buildSelectionEditSession(text, selectionContext) {
-  if (process.platform !== 'darwin') return null;
+  const isWindowsWord = process.platform === 'win32' && selectionContext?.bundleIdentifier === 'win32.word';
+  if (process.platform !== 'darwin' && !isWindowsWord) return null;
   const isWordSession = isWordBundleIdentifier(selectionContext?.bundleIdentifier);
+  if (isWordSession && !selectionContext?.documentId) return null;
   if (!selectionContext?.supportsRangeEditing && !isWordSession) return null;
+  if (!isWordSession && !isWindowsWord && !selectionContext?.elementToken) return null;
+  if (isWindowsWord && (!selectionContext.documentId || !selectionContext.windowHandle)) return null;
   const selectionRange = normalizeSelectionRange(selectionContext.selectionRange);
   if (!selectionRange) return null;
   if ((selectionContext.text || '') !== text) return null;
 
   return {
+    documentId: selectionContext.documentId || null,
+    windowHandle: selectionContext.windowHandle || null,
+    geometryContext: selectionContext.geometryContext || null,
     bundleIdentifier: selectionContext.bundleIdentifier || '',
     frontmostPid: Number.isFinite(Number(selectionContext.frontmostPid))
       ? Number(selectionContext.frontmostPid)
       : null,
+    elementToken: String(selectionContext.elementToken || ''),
     selectionStart: selectionRange.location,
     currentText: text,
     originalText: text,
     appliedChanges: new Map(),
+    generation: 1,
+    sourceStateUncertain: false,
     createdAt: Date.now(),
   };
 }
 
-function normalizeReviewChange(change) {
-  if (!change || typeof change !== 'object') return null;
-  if (!['replace', 'delete', 'insert'].includes(change.type)) return null;
+function getSourceReviewState() {
+  const data = sourceReviewData, session = lastSelectionEditSession;
+  if (!data || data.session !== session || session.generation !== data.generation) return null;
+  const changes = data.changes.filter(c => !session.appliedChanges.has(c.id) && !data.ignored.has(c.id));
+  const context = session.geometryContext || { frontmostPid: session.frontmostPid, elementToken: session.elementToken,
+    selectionRange: { location: session.selectionStart } };
+  const location = context.selectionRange.location;
+  return { token: data.token, changes, uncertain: session.sourceStateUncertain,
+    request: { ...context, bundleIdentifier: session.bundleIdentifier, documentId: session.documentId,
+      windowHandle: session.windowHandle, expectedText: session.bundleIdentifier === 'com.microsoft.Word' && context.wordParagraphSeparator === 'LF'
+        ? session.currentText.replace(/\r/g, '\n') : session.currentText,
+      selectionRange: { location, length: session.currentText.length },
+      ranges: changes.slice(0, 32).map(c => ({ id: c.id, location: location + getRelativeChangeStart(session, c), length: c.oldText.length })) } };
+}
 
-  const originalStart = Number(change.originalStart);
-  if (!Number.isFinite(originalStart) || originalStart < 0) return null;
+function offerWordSourceReview() {
+  if (!isMac || pendingRecaptureRequest || !isWordBundleIdentifier(lastSelectionEditSession?.bundleIdentifier)) return;
+  const state = getSourceReviewState();
+  if (state?.changes.length) windowManager.sendToResult('polish:auto-source-review', state.token);
+}
 
-  return {
-    id: Number.isFinite(Number(change.id)) ? Number(change.id) : Date.now(),
-    type: change.type,
-    oldText: typeof change.oldText === 'string' ? change.oldText : '',
-    newText: typeof change.newText === 'string' ? change.newText : '',
-    originalStart,
-    originalEnd: Number.isFinite(Number(change.originalEnd))
-      ? Number(change.originalEnd)
-      : originalStart + (typeof change.oldText === 'string' ? change.oldText.length : 0),
-  };
+function prepareReprocessBaseText() {
+  const session = lastSelectionEditSession;
+  if (!session) return lastOriginalText;
+  if (session.sourceStateUncertain) {
+    throw new Error('无法确认上一条修改是否已经写入原文。请检查原文，并重新选择文字后再分析。');
+  }
+  // A new generation must be based on the text that is currently in the
+  // source. Old diff ids are local to the previous generation.
+  session.originalText = session.currentText;
+  session.appliedChanges.clear();
+  session.generation += 1;
+  lastOriginalText = session.currentText;
+  windowManager.sendToResult('polish:original', session.currentText);
+  // `polish:original` resets renderer state, including its write-back mode.
+  // Re-send the active source capabilities so the next generation can still
+  // be reviewed and applied to the same source selection.
+  windowManager.sendToResult('polish:reviewContext', {
+    surgicalEditing: true,
+    platform: process.platform,
+    writeMode: 'inline',
+  });
+  return session.currentText;
 }
 
 function getAcceptedChangeDelta(change) {
@@ -546,35 +737,77 @@ function buildReverseEdit(change) {
   }
 }
 
+let isApplyingSourceEdit = false;
+async function withSourceEdit(action) {
+  if (isProcessing || isApplyingSourceEdit) return { ok: false, error: '当前操作尚未完成，请稍后重试。' };
+  isApplyingSourceEdit = true;
+  sourceReview?.setWriting(true);
+  try { return await action(); } finally { isApplyingSourceEdit = false; sourceReview?.setWriting(false); }
+}
+
 async function performStandardReplace(text) {
-  windowManager.hideResult();
-  await new Promise(r => setTimeout(r, 300));
-  lastSelectionEditSession = null;
-
-  if (process.platform === 'win32') {
+  if (typeof text !== 'string') return { ok: false, error: '替换文本无效。' };
+  const editSession = lastSelectionEditSession;
+  if (!editSession) {
     clipboard.writeText(text);
-    lastAppliedReplacement = null;
-    new Notification({ title: '润石 PoliShit', body: '已将选用版本保留到剪贴板，请在目标位置粘贴；若插错位置，可撤回后再次粘贴。' }).show();
-    return { ok: true, mode: 'clipboard' };
+    new Notification({ title: '润石 PoliShit', body: '当前编辑器无法验证原文位置，结果已复制，请在目标位置手动粘贴。' }).show();
+    return { ok: true, mode: 'copied' };
   }
-
-  await pasteText(text, { restoreClipboardAfterPaste: false });
+  if (editSession.sourceStateUncertain) {
+    return { ok: false, sourceMayHaveChanged: true,
+      error: '无法确认原文当前状态。请检查原文，并重新选择文字后再分析。' };
+  }
+  const range = { location: editSession.selectionStart, length: editSession.currentText.length };
+  const result = await applyTextEdit({
+    bundleIdentifier: editSession.bundleIdentifier, frontmostPid: editSession.frontmostPid,
+    windowHandle: editSession.windowHandle,
+    elementToken: editSession.elementToken,
+    documentId: editSession.documentId, expectedText: editSession.currentText,
+    selectionRange: range, targetRange: range,
+  }, text, { restoreClipboard: true });
+  if (!result?.ok) {
+    if (result?.sourceMayHaveChanged) editSession.sourceStateUncertain = true;
+    windowManager.focusResult?.();
+    return { ok: false, sourceMayHaveChanged: Boolean(result?.sourceMayHaveChanged),
+      error: result?.error || '原文位置已变化，请重新分析。' };
+  }
+  if (Number.isSafeInteger(result.selectionRange?.location)) editSession.selectionStart = result.selectionRange.location;
+  if (result.documentId) editSession.documentId = result.documentId;
+  lastSelectionEditSession = null;
+  windowManager.hideResult();
   lastAppliedReplacement = {
     originalText: lastOriginalText,
     replacedText: text,
+    selectionContext: editSession ? {
+      documentId: editSession.documentId,
+      windowHandle: editSession.windowHandle,
+      bundleIdentifier: editSession.bundleIdentifier,
+      frontmostPid: editSession.frontmostPid,
+      elementToken: editSession.elementToken,
+      selectionRange: { location: editSession.selectionStart, length: text.length },
+    } : null,
     at: Date.now(),
+    sourceStateUncertain: false,
   };
   windowManager.showUndoToast();
   return { ok: true, mode: 'replace' };
 }
 
-async function applyReviewChangeInSource(change, mode = 'accept') {
+async function applyReviewChangeInSource(change, mode = 'accept', options = {}) {
   const session = lastSelectionEditSession;
-  if (process.platform !== 'darwin' || !session) {
+  if (!session) {
     return { ok: false, error: '当前应用暂不支持逐条原位修订。' };
   }
+  if (session.sourceStateUncertain) {
+    return { ok: false, sourceMayHaveChanged: true,
+      error: '无法确认原文当前状态。请检查原文，并重新选择文字后再分析。' };
+  }
 
+  if (!['accept', 'revert'].includes(mode) || !isReviewChangeApplicable(session, change)) {
+    return { ok: false, error: '修订与原始选区不匹配，请重新分析。' };
+  }
   const isRevert = mode === 'revert';
+  if (isRevert && session.appliedChanges.has(change.id)) change = session.appliedChanges.get(change.id);
   const alreadyApplied = session.appliedChanges.has(change.id);
 
   if (!isRevert && alreadyApplied) {
@@ -587,8 +820,11 @@ async function applyReviewChangeInSource(change, mode = 'accept') {
   const relativeStart = getRelativeChangeStart(session, change, isRevert ? change.id : null);
   const edit = isRevert ? buildReverseEdit(change) : buildForwardEdit(change);
   const selectionRequest = {
+    documentId: session.documentId,
+    windowHandle: session.windowHandle,
     bundleIdentifier: session.bundleIdentifier,
     frontmostPid: session.frontmostPid,
+    elementToken: session.elementToken,
     expectedText: session.currentText,
     selectionRange: {
       location: session.selectionStart,
@@ -600,40 +836,75 @@ async function applyReviewChangeInSource(change, mode = 'accept') {
     },
   };
 
-  const result = await applyTextEdit(selectionRequest, edit.replacement, { restoreClipboard: true });
+  const result = await applyTextEdit(selectionRequest, edit.replacement, {
+    restoreClipboard: true,
+    sourceOverlay: options.sourceOverlay === true,
+    // Word counts tracked deleted text inside Range offsets. Enabling Track
+    // Changes here makes exact read-back fail after a successful write and
+    // breaks the next suggestion in a batch. Keep this direct-edit path exact.
+    trackChanges: false,
+  });
   if (!result?.ok) {
-    windowManager.focusResult?.();
-    return { ok: false, error: result?.error || '原位修订失败。' };
+    if (result?.sourceMayHaveChanged) session.sourceStateUncertain = true;
+    if (!options.sourceOverlay) windowManager.focusResult?.();
+    return { ok: false, sourceMayHaveChanged: Boolean(result?.sourceMayHaveChanged),
+      error: result?.error || '原位修订失败。' };
   }
 
   if (Number.isFinite(Number(result?.selectionRange?.location))) {
     session.selectionStart = Number(result.selectionRange.location);
   }
+  if (result.documentId) session.documentId = result.documentId;
+  if (result.geometryContext) session.geometryContext = result.geometryContext;
   session.currentText = applyStringEdit(session.currentText, relativeStart, edit.targetLength, edit.replacement);
   if (isRevert) {
     session.appliedChanges.delete(change.id);
   } else {
     session.appliedChanges.set(change.id, change);
   }
-  windowManager.focusResult?.();
+  if (!options.sourceOverlay) windowManager.focusResult?.();
   return { ok: true, applied: true, currentText: session.currentText };
 }
 
 async function finalizeSurgicalReview(finalText) {
   const session = lastSelectionEditSession;
-  if (!session || process.platform !== 'darwin') {
+  if (!session) {
     return performStandardReplace(finalText);
+  }
+  if (session.sourceStateUncertain) {
+    return { ok: false, sourceMayHaveChanged: true,
+      error: '无法确认原文当前状态。请检查原文，并重新选择文字后再分析。' };
   }
 
   if (finalText === session.currentText) {
+    if (session.currentText !== session.originalText) {
+      lastAppliedReplacement = {
+        originalText: session.originalText,
+        replacedText: session.currentText,
+        selectionContext: {
+          documentId: session.documentId,
+          windowHandle: session.windowHandle,
+          bundleIdentifier: session.bundleIdentifier,
+          frontmostPid: session.frontmostPid,
+          elementToken: session.elementToken,
+          selectionRange: { location: session.selectionStart, length: session.currentText.length },
+        },
+        at: Date.now(),
+        sourceStateUncertain: false,
+      };
+      windowManager.showUndoToast();
+    }
     lastSelectionEditSession = null;
     windowManager.hideResult();
     return { ok: true, mode: 'surgical-noop' };
   }
 
   const selectionRequest = {
+    documentId: session.documentId,
+    windowHandle: session.windowHandle,
     bundleIdentifier: session.bundleIdentifier,
     frontmostPid: session.frontmostPid,
+    elementToken: session.elementToken,
     expectedText: session.currentText,
     selectionRange: {
       location: session.selectionStart,
@@ -647,12 +918,29 @@ async function finalizeSurgicalReview(finalText) {
 
   const result = await applyTextEdit(selectionRequest, finalText, { restoreClipboard: true });
   if (!result?.ok) {
+    if (result?.sourceMayHaveChanged) session.sourceStateUncertain = true;
     windowManager.focusResult?.();
-    return { ok: false, error: result?.error || '无法完成最终原位修订。' };
+    return { ok: false, sourceMayHaveChanged: Boolean(result?.sourceMayHaveChanged),
+      error: result?.error || '无法完成最终原位修订。' };
   }
 
+  lastAppliedReplacement = {
+    originalText: session.originalText,
+    replacedText: finalText,
+    selectionContext: {
+      documentId: result.documentId || session.documentId,
+      windowHandle: session.windowHandle,
+      bundleIdentifier: session.bundleIdentifier,
+      frontmostPid: session.frontmostPid,
+      elementToken: session.elementToken,
+      selectionRange: { location: session.selectionStart, length: finalText.length },
+    },
+    at: Date.now(),
+    sourceStateUncertain: false,
+  };
   lastSelectionEditSession = null;
   windowManager.hideResult();
+  windowManager.showUndoToast();
   return { ok: true, mode: 'surgical-finalize' };
 }
 
@@ -668,9 +956,10 @@ function scheduleToolbarShow(snapshot) {
   pendingToolbarSnapshot = snapshot;
   toolbarShowTimer = setTimeout(() => {
     toolbarShowTimer = null;
-    if (!pendingToolbarSnapshot || pendingToolbarSnapshot !== snapshot) return;
+    // Compare by timestamp instead of object reference to handle snapshot recycling
+    if (!pendingToolbarSnapshot || pendingToolbarSnapshot.at !== snapshot.at) return;
     const current = getRecentSelectionSnapshot();
-    if (!current || current !== snapshot) return;
+    if (!current || current.at !== snapshot.at) return;
     windowManager.showToolbar(
       snapshot.bounds
       || snapshot.fieldBounds
@@ -682,7 +971,7 @@ function scheduleToolbarShow(snapshot) {
       },
     );
     pendingToolbarSnapshot = null;
-  }, 500);
+  }, 320);
 }
 
 function estimateResultWindowMetrics(text, anchorBounds) {
@@ -691,23 +980,40 @@ function estimateResultWindowMetrics(text, anchorBounds) {
   const density = Math.max(lineCount, Math.ceil(normalized.length / 60));
   // Result contains annotations (~2x) + full revised text (~1x) ≈ 3x original density
   const contentDensity = Math.ceil(density * 2.8);
-  const preferredWidth = Math.max(560, Math.min(720, 500 + Math.ceil(normalized.length / 150) * 20));
+  const preferredWidth = Math.max(680, Math.min(760, 680 + Math.ceil(normalized.length / 260) * 12));
   const preferredHeight = Math.max(
-    420,
-    Math.min(960, 260 + contentDensity * 22),
+    560,
+    Math.min(720, 470 + contentDensity * 15),
   );
 
   return { preferredWidth, preferredHeight };
 }
 
-function getToolbarStatus() {
+async function getToolbarStatus() {
   const enabled = config.get('ui.floatingToolbarEnabled') !== false;
+  const diagnostics = selectionWatcher?.diagnose
+    ? await selectionWatcher.diagnose()
+    : null;
+  const appAccessibilityTrusted = isMac
+    ? systemPreferences.isTrustedAccessibilityClient(false)
+    : null;
+  const helperTrusted = isMac ? diagnostics?.helperTrusted === true : null;
+
   return {
     enabled,
     platform: process.platform,
-    accessibilityTrusted: isMac ? systemPreferences.isTrustedAccessibilityClient(false) : null,
-    selectionMonitoringAvailable: isMac,
+    // This is the permission that actually matters to the selection path.
+    accessibilityTrusted: isMac ? helperTrusted : null,
+    appAccessibilityTrusted,
+    helperTrusted,
+    helperAvailable: diagnostics?.helperAvailable !== false,
+    helperBackend: diagnostics?.helperBackend || '',
+    helperError: diagnostics?.helperError || '',
+    selectionMonitoringAvailable: !isMac || diagnostics?.helperAvailable !== false,
     copyFallbackAvailable: true,
+    lastProbeAt: diagnostics?.lastProbeAt || null,
+    lastSelectionAt: diagnostics?.lastSelectionAt || null,
+    lastSelectionSource: diagnostics?.lastSelectionSource || '',
   };
 }
 
@@ -736,11 +1042,15 @@ async function refreshCommercialAccount() {
   try {
     return await commercialClient.getStatus({ refresh: true });
   } catch (_) {
-    return commercialClient.getStatus();
+    try {
+      return await commercialClient.getStatus();
+    } catch (_) {
+      return null;
+    }
   }
 }
 
-function handleToolbarToggle(enabled) {
+async function handleToolbarToggle(enabled) {
   const normalized = Boolean(enabled);
   config.set('ui.floatingToolbarEnabled', normalized);
   selectionWatcher?.setEnabled(normalized);
@@ -765,35 +1075,122 @@ function registerIPC() {
   ipcMain.handle('config:set', (_e, key, value) => config.set(key, value));
 
   ipcMain.handle('action:replace', async (_e, text) => {
-    return performStandardReplace(text);
+    return withSourceEdit(() => performStandardReplace(text));
   });
 
   ipcMain.handle('action:apply-review-change', async (_e, change, mode) => {
-    const normalizedChange = normalizeReviewChange(change);
-    if (!normalizedChange) {
-      return { ok: false, error: '修改数据无效。' };
+    try {
+      const normalizedChange = normalizeReviewChange(change);
+      if (!normalizedChange) {
+        return { ok: false, error: '修改数据无效。' };
+      }
+      return await withSourceEdit(() => applyReviewChangeInSource(normalizedChange, mode));
+    } catch (err) {
+      console.error('[runshi] apply-review-change failed:', err.message);
+      return { ok: false, error: `修订失败：${err.message}` };
     }
-    return applyReviewChangeInSource(normalizedChange, mode);
   });
+
+  ipcMain.handle('source-review:start', async (event, token) => {
+    if (!token || !sourceReviewData || event.sender !== windowManager.resultWindow?.webContents || isProcessing || isApplyingSourceEdit
+      || token !== getSourceReviewState()?.token) return { ok: false, error: '当前修订不可开启原文浮窗。' };
+    const resultWindow = windowManager.resultWindow;
+    const session = sourceReviewData.session;
+    const epoch = sourceReview.epoch;
+    const sameSession = () => windowManager.resultWindow === resultWindow && !resultWindow.isDestroyed()
+      && event.sender === resultWindow.webContents
+      && !isProcessing && !isApplyingSourceEdit && sourceReviewData?.session === session
+      && getSourceReviewState()?.token === token;
+    const current = () => sameSession() && sourceReview.epoch === epoch;
+    const cancelled = { ok: false, error: '原文浮窗已取消，请重新开启。' };
+    // Creating/loading the native panels can activate Electron on macOS.
+    // Finish that work before restoring the verified source application.
+    await sourceReview.windows();
+    if (!current()) return cancelled;
+    const restored = await restoreFrontApp(session);
+    if (!current()) return cancelled;
+    if (restored === false) {
+      windowManager.focusResult();
+      return { ok: false, error: '无法恢复原文应用。请回到原文应用，重新选择文字后分析。' };
+    }
+    if (isMac && isWordBundleIdentifier(session.bundleIdentifier)) {
+      // Word can publish its AX identity after the original capture. Reacquire
+      // only the same selected range in the same verified document, never by
+      // searching for a matching string or moving the user's selection.
+      const context = await probeWordSelectionContext().catch(() => null);
+      if (!current()) return cancelled;
+      const geometry = context?.geometryContext;
+      const previousPid = session.geometryContext?.frontmostPid || session.frontmostPid;
+      if (context?.documentId !== session.documentId || context?.text !== session.currentText
+        || context?.selectionRange?.location !== session.selectionStart
+        || context?.selectionRange?.length !== session.currentText.length
+        || !Number.isInteger(geometry?.frontmostPid) || geometry.frontmostPid <= 0
+        || typeof geometry?.elementToken !== 'string' || !geometry.elementToken
+        || !Number.isSafeInteger(geometry?.selectionRange?.location) || geometry.selectionRange.location < 0
+        || geometry?.selectionRange?.length !== session.currentText.length
+        || (Number.isInteger(previousPid) && previousPid > 0 && geometry.frontmostPid !== previousPid)) {
+        windowManager.focusResult();
+        return { ok: false, error: 'Word 原文位置或选区已变化，无法安全定位。请保持原选区或重新选择文字分析。' };
+      }
+      session.geometryContext = { frontmostPid: geometry.frontmostPid, elementToken: geometry.elementToken,
+        wordParagraphSeparator: geometry.wordParagraphSeparator,
+        selectionRange: { location: geometry.selectionRange.location, length: geometry.selectionRange.length } };
+    }
+    const result = await sourceReview.start(token);
+    // start() deliberately advances its epoch once; any additional advancement
+    // or changed result/session means another action cancelled this request.
+    if (!sameSession() || (result.ok && sourceReview.epoch !== epoch + 1)) {
+      if (result.ok && sourceReview.token === token && sourceReview.epoch === epoch + 1) sourceReview.stop();
+      return cancelled;
+    }
+    if (result.ok) resultWindow.hide();
+    else windowManager.focusResult();
+    return result;
+  });
+  ipcMain.handle('source-review:stop', event => {
+    if (event.sender !== windowManager.resultWindow?.webContents) return { ok: false };
+    sourceReview.stop();
+    return { ok: true };
+  });
+  ipcMain.handle('source-review:state', (event, token, id, status) => {
+    if (event.sender !== windowManager.resultWindow?.webContents || token !== sourceReviewData?.token
+      || !sourceReviewData.changes.some(c => c.id === id) || !['pending', 'rejected'].includes(status)) return { ok: false };
+    if (status === 'rejected') sourceReviewData.ignored.add(id);
+    else sourceReviewData.ignored.delete(id);
+    return { ok: true };
+  });
+  ipcMain.handle('source-review:action', (event, payload) => sourceReview.action(event.sender, payload));
 
   ipcMain.handle('action:finalize-review', async (_e, finalText) => {
     if (typeof finalText !== 'string') {
       return { ok: false, error: '最终文本无效。' };
     }
-    return finalizeSurgicalReview(finalText);
+    return withSourceEdit(() => finalizeSurgicalReview(finalText));
   });
 
-  ipcMain.handle('action:rollback-last-replace', async () => {
-    if (!lastAppliedReplacement?.originalText) {
-      return { ok: false };
+  ipcMain.handle('action:rollback-last-replace', () => withSourceEdit(async () => {
+    try {
+      if (lastAppliedReplacement?.sourceStateUncertain) {
+        return { ok: false, sourceMayHaveChanged: true,
+          error: '无法确认上次恢复是否已经写入原文。请检查原文后关闭此提示。' };
+      }
+      const result = await restoreReplacement(lastAppliedReplacement, { applyTextEdit, copyText: text => clipboard.writeText(text) });
+      if (!result.ok) {
+        if (result.sourceMayHaveChanged && lastAppliedReplacement) {
+          lastAppliedReplacement.sourceStateUncertain = true;
+        }
+        return result;
+      }
+      lastAppliedReplacement = null;
+      windowManager.hideUndoToast();
+      new Notification({ title: '润石 PoliShit', body: result.mode === 'copied'
+        ? '原文已复制。当前编辑器无法安全定位原文，请在编辑器中撤销或手动替换。'
+        : '已验证原文位置并恢复替换前的文本。' }).show();
+      return result;
+    } catch (err) {
+      return { ok: false, error: `恢复失败：${err.message}` };
     }
-
-    await pasteText(lastAppliedReplacement.originalText, { restoreClipboardAfterPaste: true });
-    lastAppliedReplacement = null;
-    windowManager.hideUndoToast();
-    new Notification({ title: '润石 PoliShit', body: '已回档到替换前的原文。' }).show();
-    return { ok: true };
-  });
+  }));
 
   ipcMain.handle('undo:close', () => {
     windowManager.hideUndoToast();
@@ -810,7 +1207,7 @@ function registerIPC() {
       shell.openExternal(url);
     }
   });
-  ipcMain.handle('window:close-result', () => windowManager.hideResult());
+  ipcMain.handle('window:close-result', () => { sourceReview?.stop(); windowManager.hideResult(); });
 
   ipcMain.handle('shortcut:get', () => config.get('shortcut'));
   ipcMain.handle('shortcut:set', (_e, acc) => {
@@ -824,7 +1221,7 @@ function registerIPC() {
       return result;
     }
 
-    config.set('shortcut', acc);
+    config.set('shortcut', result.accelerator);
     trayManager?.refreshMenu();
     return result;
   });
@@ -833,7 +1230,7 @@ function registerIPC() {
     try {
       const provider = createProvider(
         config.get('provider'),
-        getCommercialProviderContext(),
+        null,
       );
       await provider.testConnection();
       return { success: true };
@@ -852,11 +1249,11 @@ function registerIPC() {
 
   // Re-process with a different task (switch mode on the fly)
   ipcMain.handle('action:reprocess', async (_e, task) => {
-    if (isProcessing) return;
+    if (isProcessing || isApplyingSourceEdit) return { ok: false, busy: true };
     isProcessing = true;
     try {
       config.set('pipeline.task', task);
-      const text = lastOriginalText;
+      const text = prepareReprocessBaseText();
       if (!text) {
         windowManager.sendToResult('polish:error', '无原始文本可重新处理。');
         return;
@@ -866,20 +1263,22 @@ function registerIPC() {
       windowManager.sendToResult('polish:error', `处理失败: ${err.message}`);
     } finally {
       isProcessing = false;
+      offerWordSourceReview();
+      runPendingRecaptureIfNeeded();
     }
   });
 
   // Regenerate: re-run the same task with higher temperature for variation
   ipcMain.handle('action:regenerate', async () => {
-    if (isProcessing) return;
+    if (isProcessing || isApplyingSourceEdit) return { ok: false, busy: true };
     isProcessing = true;
     try {
-      const text = lastOriginalText;
+      const text = prepareReprocessBaseText();
       if (!text) {
         windowManager.sendToResult('polish:error', '无原始文本可重新处理。');
         return;
       }
-      const origTemp = config.get('pipeline.temperature') || 0.3;
+      const origTemp = config.get('pipeline.temperature') ?? 0.3;
       await runPipeline(text, {
         progressPrefix: '正在重新生成...',
         temperatureOverride: Math.min(origTemp + 0.3, 1.0),
@@ -888,21 +1287,32 @@ function registerIPC() {
       windowManager.sendToResult('polish:error', `处理失败: ${err.message}`);
     } finally {
       isProcessing = false;
+      offerWordSourceReview();
+      runPendingRecaptureIfNeeded();
     }
   });
 
   // Recapture: grab new selection and reprocess
   ipcMain.handle('action:recapture', async () => {
-    if (isProcessing) return;
-    handleTrigger();
+    activeRunToken += 1;
+    if (isProcessing || isApplyingSourceEdit) {
+      pendingRecaptureRequest = true;
+      windowManager.sendToResult('polish:progress', { stage: '正在结束当前任务...', percent: 0 });
+      return { ok: true, queued: true };
+    }
+    await handleTrigger({
+      preferCachedSelection: true,
+      selectionCacheMaxAgeMs: MANUAL_REFRESH_SELECTION_CACHE_MAX_AGE_MS,
+    });
+    return { ok: true, queued: false };
   });
 
   // Reprocess with a specific model
   ipcMain.handle('action:reprocessWithModel', async (_e, modelId) => {
-    if (isProcessing) return;
+    if (isProcessing || isApplyingSourceEdit) return { ok: false, busy: true };
     isProcessing = true;
     try {
-      const text = lastOriginalText;
+      const text = prepareReprocessBaseText();
       if (!text) {
         windowManager.sendToResult('polish:error', '无原始文本可重新处理。');
         return;
@@ -915,10 +1325,12 @@ function registerIPC() {
       windowManager.sendToResult('polish:error', `处理失败: ${err.message}`);
     } finally {
       isProcessing = false;
+      offerWordSourceReview();
+      runPendingRecaptureIfNeeded();
     }
   });
 
-  ipcMain.handle('onboarding:complete', (_e, presetId) => {
+  ipcMain.handle('onboarding:prepare', (_e, presetId) => {
     const preset = PRESETS[presetId];
     if (preset) {
       config.set('provider.preset', presetId);
@@ -928,24 +1340,57 @@ function registerIPC() {
         config.set('provider.apiKey', '');
       }
     }
+    return { ok: true, presetId };
+  });
+
+  ipcMain.handle('onboarding:complete', () => {
     config.set('onboarding.completed', true);
     windowManager.hideOnboarding();
     windowManager.showHome();
+    return { ok: true };
   });
 
   ipcMain.handle('window:open-onboarding', () => windowManager.showOnboarding());
 
   // ── Toolbar action: user clicked 润色/降AIGC on the floating toolbar ──
+  ipcMain.handle('toolbar:resize', (_e, width, height) => {
+    const win = windowManager?.toolbarWindow;
+    if (win && !win.isDestroyed()) {
+      const bounds = win.getBounds();
+      win.setBounds({ x: bounds.x, y: bounds.y, width: Math.round(width), height: Math.round(height) });
+    }
+  });
+
   ipcMain.handle('toolbar:action', async (_e, task) => {
+    if (toolbarTestMode) {
+      toolbarTestMode = false;
+      windowManager.hideToolbar();
+      new Notification({
+        title: '润石 PoliShit',
+        body: '测试通过：浮窗可以正常显示并响应点击。',
+      }).show();
+      return { ok: true, test: true };
+    }
+
     windowManager.hideToolbar();
     // Set the task mode
     config.set('pipeline.task', task);
     // Trigger the main processing flow
-    handleTrigger({ preferCachedSelection: true });
+    try {
+      await handleTrigger({ preferCachedSelection: true });
+    } catch (err) {
+      windowManager.sendToResult('polish:error', `处理失败: ${err.message}`);
+    }
   });
 
   ipcMain.handle('toolbar:get-status', () => getToolbarStatus());
   ipcMain.handle('toolbar:set-enabled', (_e, enabled) => handleToolbarToggle(enabled));
+  ipcMain.handle('toolbar:test', () => {
+    toolbarTestMode = true;
+    const shown = windowManager.showToolbarTest();
+    if (!shown) toolbarTestMode = false;
+    return { ok: Boolean(shown) };
+  });
   ipcMain.handle('commercial:get-status', withCommercialBackend(() => commercialClient.getStatus()));
   ipcMain.handle('commercial:refresh-status', withCommercialBackend(() => commercialClient.getStatus({ refresh: true })));
   ipcMain.handle('commercial:save-settings', async (_e, payload) => {
@@ -969,6 +1414,7 @@ function registerIPC() {
   ipcMain.handle('commercial:checkin-status', withCommercialBackend(() => commercialClient.getCheckinStatus()));
   ipcMain.handle('updates:get-status', () => updateManager?.getStatus());
   ipcMain.handle('updates:check', () => updateManager?.checkForUpdates({ force: true }));
+  ipcMain.handle('updates:install', () => updateManager?.installAvailableUpdate());
   ipcMain.handle('updates:open-download', () => updateManager?.openLatestRelease());
   ipcMain.handle('toolbar:open-accessibility-settings', async () => {
     if (isMac) {
@@ -982,6 +1428,12 @@ function registerIPC() {
         await shell.openExternal(
           'x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility',
         );
+      } catch (_) {
+        // Ignore failures; the user can still navigate manually.
+      }
+    } else if (process.platform === 'win32') {
+      try {
+        await shell.openExternal('ms-settings:easeofaccess');
       } catch (_) {
         // Ignore failures; the user can still navigate manually.
       }

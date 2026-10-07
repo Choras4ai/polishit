@@ -53,6 +53,9 @@ class AnthropicProvider extends BaseProvider {
     }
 
     const data = await response.json();
+    if (data.stop_reason === 'max_tokens' && options.requireComplete !== false) {
+      throw new Error('模型输出达到长度上限，结果可能不完整。请缩短选区后重试。');
+    }
     const textBlock = data.content?.find(b => b.type === 'text');
     if (!textBlock?.text) {
       throw new Error('Anthropic 返回数据格式异常');
@@ -63,7 +66,7 @@ class AnthropicProvider extends BaseProvider {
   async testConnection() {
     await this.chat(
       [{ role: 'user', content: '你好' }],
-      { maxTokens: 10, temperature: 0 },
+      { maxTokens: 10, temperature: 0, requireComplete: false },
     );
     return true;
   }

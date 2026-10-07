@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">波江座人工智能 · 双星</title>
+  <desc id="desc">一大一小两颗四芒星沿对角线排列，采用午夜绿色。</desc>
+  <g id="icon" fill="#4F6155">
+    <path d="M213 158C226 240 251 266 333 279C251 292 226 318 213 400C200 318 175 292 93 279C175 266 200 240 213 158Z"/>
+    <path d="M367 82C374 121 387 135 426 142C387 149 374 163 367 202C360 163 347 149 308 142C347 135 360 121 367 82Z"/>
+  </g>
+</svg>

@@ -30,9 +30,42 @@ const PRESETS = {
   'siliconflow-deepseek-v4-flash': {
     id: 'siliconflow-deepseek-v4-flash',
     name: 'DeepSeek V4-Flash（硅基流动）',
-    description: 'DeepSeek-V4 系列预览版 MoE 模型，284B 总参数 / 13B 激活，1M 上下文，由硅基流动托管',
+    description: 'DeepSeek-V4 系列高性价比版本，适合中文润色与快速响应，由硅基流动托管',
     apiUrl: 'https://api.siliconflow.cn/v1',
     model: 'deepseek-ai/DeepSeek-V4-Flash',
+    needsKey: true,
+    providerType: 'openai',
+    keyPlaceholder: 'sk-...',
+    keyUrl: 'https://cloud.siliconflow.cn/account/ak',
+  },
+  'siliconflow-deepseek-v4-pro': {
+    id: 'siliconflow-deepseek-v4-pro',
+    name: 'DeepSeek V4-Pro（硅基流动）',
+    description: 'DeepSeek-V4 系列高性能版本，适合复杂推理与高质量文本任务',
+    apiUrl: 'https://api.siliconflow.cn/v1',
+    model: 'deepseek-ai/DeepSeek-V4-Pro',
+    needsKey: true,
+    providerType: 'openai',
+    keyPlaceholder: 'sk-...',
+    keyUrl: 'https://cloud.siliconflow.cn/account/ak',
+  },
+  'siliconflow-glm-5-3': {
+    id: 'siliconflow-glm-5-3',
+    name: 'GLM-5.3（硅基流动）',
+    description: '智谱 GLM-5.3，适合专业文本、长文档与复杂任务',
+    apiUrl: 'https://api.siliconflow.cn/v1',
+    model: 'zai-org/GLM-5.3',
+    needsKey: true,
+    providerType: 'openai',
+    keyPlaceholder: 'sk-...',
+    keyUrl: 'https://cloud.siliconflow.cn/account/ak',
+  },
+  'siliconflow-qwen3-8-27b': {
+    id: 'siliconflow-qwen3-8-27b',
+    name: 'Qwen3.8-27B（硅基流动）',
+    description: '通义千问 Qwen3.8-27B，适合中文润色与日常文本任务',
+    apiUrl: 'https://api.siliconflow.cn/v1',
+    model: 'Qwen/Qwen3.8-27B',
     needsKey: true,
     providerType: 'openai',
     keyPlaceholder: 'sk-...',
@@ -49,23 +82,13 @@ const PRESETS = {
     keyPlaceholder: 'sk-...',
     keyUrl: 'https://cloud.siliconflow.cn/account/ak',
   },
-  'siliconflow-kimi-k2-6': {
-    id: 'siliconflow-kimi-k2-6',
-    name: 'Kimi K2.6（硅基流动）',
-    description: 'Kimi K2.6 常规通道，价格更低、限速更严，硅基流动托管',
-    apiUrl: 'https://api.siliconflow.cn/v1',
-    model: 'moonshotai/Kimi-K2.6',
-    needsKey: true,
-    providerType: 'openai',
-    keyPlaceholder: 'sk-...',
-    keyUrl: 'https://cloud.siliconflow.cn/account/ak',
-  },
   doubao: {
     id: 'doubao',
     name: '豆包（字节跳动）',
     description: '火山引擎 API，需要使用接入点 ID 作为模型名',
     apiUrl: 'https://ark.cn-beijing.volces.com/api/v3',
     model: 'doubao-1.5-pro-32k',
+    allowModelOverride: true,
     needsKey: true,
     providerType: 'openai',
     keyPlaceholder: '输入 API Key',
@@ -110,6 +133,7 @@ const PRESETS = {
     description: '完全离线运行，需先安装 Ollama 并下载模型',
     apiUrl: 'http://localhost:11434',
     model: 'qwen2.5',
+    allowModelOverride: true,
     needsKey: false,
     providerType: 'ollama',
   },
@@ -129,8 +153,10 @@ const PRESET_ORDER = [
   'together',
   'deepseek',
   'siliconflow-deepseek-v4-flash',
+  'siliconflow-deepseek-v4-pro',
+  'siliconflow-glm-5-3',
+  'siliconflow-qwen3-8-27b',
   'siliconflow-kimi-k2-6-pro',
-  'siliconflow-kimi-k2-6',
   'doubao',
   'gemini',
   'claude',
@@ -139,4 +165,14 @@ const PRESET_ORDER = [
   'custom',
 ];
 
-module.exports = { PRESETS, PRESET_ORDER };
+// Keep old persisted IDs resolvable, while only current presets appear in UI.
+const PRESET_ALIASES = {
+  'siliconflow-glm-5-2': 'siliconflow-glm-5-3',
+  'siliconflow-qwen3-6-35b': 'siliconflow-qwen3-8-27b',
+  'siliconflow-kimi-k2-6': 'siliconflow-kimi-k2-6-pro',
+};
+for (const [legacy, current] of Object.entries(PRESET_ALIASES)) {
+  PRESETS[legacy] = PRESETS[current];
+}
+
+module.exports = { PRESETS, PRESET_ORDER, PRESET_ALIASES };

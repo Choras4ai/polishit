@@ -30,7 +30,7 @@ class SlidingWindowCounter {
     let bucket = this.buckets.get(key);
 
     if (!bucket) {
-      bucket = { timestamps: [], lastCleanup: now };
+      bucket = { timestamps: [], lastCleanup: now, windowMs };
       this.buckets.set(key, bucket);
     }
 
@@ -38,6 +38,7 @@ class SlidingWindowCounter {
     const cutoff = now - windowMs;
     bucket.timestamps = bucket.timestamps.filter(t => t > cutoff);
     bucket.lastCleanup = now;
+    bucket.windowMs = windowMs;
 
     if (bucket.timestamps.length >= limit) {
       const oldestInWindow = bucket.timestamps[0];
@@ -68,9 +69,9 @@ class SlidingWindowCounter {
   }
 
   _globalCleanup() {
-    const cutoff = Date.now() - 10 * 60 * 1000; // Remove buckets inactive > 10min
+    const now = Date.now();
     for (const [key, bucket] of this.buckets) {
-      if (bucket.lastCleanup < cutoff) {
+      if (!bucket.timestamps.some(timestamp => timestamp > now - bucket.windowMs)) {
         this.buckets.delete(key);
       }
     }

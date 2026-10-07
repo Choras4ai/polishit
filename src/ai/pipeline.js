@@ -116,64 +116,82 @@ Output the optimized full text directly.`,
 
 // ── 中文去模板化 Prompts ──
 const ZH_DEAI_PROMPTS = {
-  deTemplate: `你是学术改写专家，消除AI生成文本的模板化痕迹。
+  deTemplate: `你是中文写作自然化编辑。目标是降低文本的机械感、模板感和同质化表达，使其更像真实作者在认真修改后的文字；不是承诺规避任何检测系统。
 
-改写目标：
-1. 替换/删除"首先…其次…最后…""此外""综上所述"等套路连接词
-2. 打破句长单调节奏
-3. 变化重复的段首结构
-4. 删除"值得注意的是""发挥重要作用"等空洞套话
-5. 用领域内自然同义词替换反复出现的连接词/形容词
+先在内部判断文本的AI味来源，再改写。常见来源包括：
+1. 套路连接词堆叠："首先/其次/最后""此外""综上所述""值得注意的是"等。
+2. 句式过于整齐：多句都是"通过……可以……""不仅……而且……""在……方面具有……意义"。
+3. 空泛评价过多："发挥重要作用""具有显著意义""提供有力支撑""进一步促进"等没有信息量的套话。
+4. 段首结构重复：连续用"本研究/本文/该方法/这一结果"开头。
+5. 词汇过度均匀：反复使用"有效""良好""重要""显著"等万能形容词。
+6. 表达过度平滑：所有句子都很完整、很圆，但缺少作者自己的判断顺序和语气重心。
+
+改写方法：
+1. 优先删除不承载信息的连接词；必要时换成更自然的承接方式，而不是机械替换同义词。
+2. 在不改变含义的前提下调整句子节奏：长句可拆，短句可合并，避免连续句长接近。
+3. 把空泛名词化表达改成具体动词或更直接的判断；如果原文没有具体信息，就删去空话，不补写新内容。
+4. 适度调整语序，把真正的判断、限制条件或结果放到更自然的位置。
+5. 保留必要术语、数据、引用和hedging表达；学术文本要自然，但仍要正式、准确、可审阅。
+6. 保留作者原有信息密度和逻辑层级，不为了"像人"而口语化、情绪化或加入个人经历。
 
 {genre_rule}
 
-禁止：制造错误；插入原文没有的观点；改变事实/数据/专有名词/引用/论证结构；增减论断；降低质量。
+禁止：制造错误；插入原文没有的观点/案例/数据；改变事实/专有名词/引用/论证结构；增强或减弱论断；为了变化而替换术语；输出检测承诺或解释。
 
 直接输出改写后的完整文本，无解释。`,
 
-  finalCheck: `你是去模板化文本的终审校对员。文本已改写，只检查：
+  finalCheck: `你是去模板化文本的终审校对员。文本已改写，只做轻量复核：
 
-1. 连续2+段相同开头结构？变化一段。
-2. 近距离内3+模板化连接词？替换一两个。
-3. 连续4+句长度几乎相同？拆分或合并一句。
+1. 是否仍有连续2处以上套路连接词？删除或弱化其中一处。
+2. 是否仍有连续3句句式/句长高度相似？只微调一处句式或断句。
+3. 是否仍有"重要作用/显著意义/有力支撑/有效提升/良好效果"等空泛套话？没有具体信息支撑时删去。
+4. 是否因为改写变得过度口语或不够学术？恢复正式、克制的表达。
 
 无上述问题则原样返回。
 
 {genre_rule}
 
-禁止：大规模改写；改变含义/事实/结构；添加新内容。
+禁止：大规模改写；改变含义/事实/结构；添加新内容；输出任何检测结论。
 
 直接输出文本。`,
 };
 
 // ── English De-template Prompts ──
 const EN_DEAI_PROMPTS = {
-  deTemplate: `You are an academic rewriter removing formulaic AI-writing patterns.
+  deTemplate: `You are a naturalness editor for academic and professional writing. Your goal is to reduce robotic, formulaic, overly uniform wording and make the text read like a careful human revision; do not promise to bypass any detector.
 
-Targets:
-1. Replace/remove stock transitions ("Firstly…Secondly…", "Moreover", "In conclusion", "It is important to note")
-2. Break monotonous sentence-length rhythm
-3. Vary repetitive paragraph openings
-4. Remove hollow phrases ("It is worth noting that", "plays an important role")
-5. Replace repeated connectors/adjectives with domain-appropriate synonyms
+Internally diagnose the source of AI-like writing before rewriting. Common sources include:
+1. Stock transitions: "Firstly/Secondly/Moreover/In conclusion/It is important to note".
+2. Repeated sentence frames: "This study aims to...", "The results indicate that...", "It plays an important role in...".
+3. Hollow evaluative phrases: "significant implications", "robust support", "important role", "effective improvement" without specific content.
+4. Repetitive paragraph openings and overly even sentence lengths.
+5. Over-smoothed prose that states every relationship in the same balanced rhythm.
+
+Rewrite method:
+1. Prefer deleting empty transitions over replacing them mechanically.
+2. Vary rhythm by splitting or merging sentences only where meaning remains clear.
+3. Turn vague nominal phrases into precise verbs or concise claims; delete empty phrasing when the source gives no concrete detail.
+4. Preserve terms, data, citations, hedging, and argument structure.
+5. Keep the register appropriate to the genre; do not add personal anecdotes, casual slang, or unsupported examples.
 
 {genre_rule}
 
-NEVER: fabricate errors; insert subjective commentary; change facts/data/proper nouns/citations/argument structure; add info or strengthen claims; lower quality.
+NEVER: fabricate facts/data/citations; add new arguments; change claim strength; replace domain terms just for variety; output detector claims or explanations.
 
 Output the rewritten full text directly. No explanations or labels.`,
 
-  finalCheck: `Final proofreader for de-templated text. Check ONLY:
+  finalCheck: `Final proofreader for naturalized text. Check ONLY:
 
-1. 2+ consecutive paragraphs with same opening pattern? Vary one.
-2. 3+ stock connectors in close proximity? Replace one or two.
-3. 4+ sentences with nearly identical length? Split or merge one.
+1. Stock transitions still clustered? Delete or soften one.
+2. Three or more adjacent sentences still share the same frame or length? Lightly vary one.
+3. Hollow phrases such as "important role", "significant implications", "robust support", "effective improvement" remain unsupported? Remove or make concise.
+4. The text became too casual for its genre? Restore a formal, restrained tone.
 
 If none exist, return text UNCHANGED.
 
 {genre_rule}
 
-NEVER: large-scale rewriting; change meaning/facts/structure; add content.
+NEVER: large-scale rewriting; change meaning/facts/structure; add content; output detector conclusions.
 
 Output text directly.`,
 };
@@ -212,9 +230,13 @@ Return as plain JSON array (NO code blocks):
 If no changes, return []. Do NOT fabricate reasons.`;
 
 class AgentPipeline {
-  constructor(provider, config) {
+  constructor(provider, config, { temperature } = {}) {
     this.provider = provider;
-    this.config = config;
+    const keys = ['pipeline.genre', 'pipeline.task', 'pipeline.mode', 'pipeline.temperature',
+      'pipeline.customPrompts.polish', 'pipeline.customPrompts.deai'];
+    const values = Object.fromEntries(keys.map(key => [key, config.get(key)]));
+    if (temperature != null) values['pipeline.temperature'] = temperature;
+    this.config = { get: key => values[key] };
   }
 
   _getGenre() {
@@ -291,11 +313,11 @@ ${customPrompt}`;
     return trimmed;
   }
 
-  async process(text, onProgress, taskOverride) {
+  async process(text, onProgress, taskOverride, options = {}) {
     const rawTask = taskOverride || this.config.get('pipeline.task') || 'polish';
     const task = rawTask === 'deai' ? 'deai' : 'polish';
     const mode = this.config.get('pipeline.mode') || 'single';
-    const temperature = this.config.get('pipeline.temperature') || 0.3;
+    const temperature = this.config.get('pipeline.temperature') ?? 0.3;
     const lang = detectLanguage(text);
 
     let polishedText;
@@ -309,6 +331,17 @@ ${customPrompt}`;
 
     // Sanitize: detect when model returns advice instead of rewritten text
     polishedText = this._sanitizeOutput(polishedText, text);
+
+    // Word COM offsets include CR paragraph marks. Keep the input's uniform
+    // line endings and selected boundary paragraphs, rather than proposing
+    // CR -> LF replacements or deleting a final paragraph after trim().
+    const lineEndings = text.match(/\r\n|\r|\n/g) || [];
+    if (lineEndings.length && lineEndings.every(ending => ending === lineEndings[0])) {
+      polishedText = polishedText.replace(/\r\n|\r|\n/g, lineEndings[0]);
+      polishedText = (text.match(/^[\r\n]+/)?.[0] || '')
+        + polishedText.replace(/^[\r\n]+|[\r\n]+$/g, '')
+        + (text.match(/[\r\n]+$/)?.[0] || '');
+    }
 
     // Compute diff and generate explanations in parallel
     onProgress({ stage: '正在分析修改...', percent: 70 });
@@ -325,7 +358,7 @@ ${customPrompt}`;
     // Skip AI explain for tiny texts (< 30 chars) — diff highlighting alone is clear enough
     // Skip explain if too many changes (>20) — meaningful explain is impractical
     const changeCount = diff.changes.filter(c => c.type !== 'equal').length;
-    if (text.length < 30 || changeCount > 20) {
+    if (options.skipExplanations || text.length < 30 || changeCount > 20) {
       return { polishedText, diff, explanations: [], task };
     }
 
@@ -359,9 +392,10 @@ ${customPrompt}`;
   // Estimate max_tokens needed based on input length (1.3x buffer + 200 baseline)
   _estimateMaxTokens(text) {
     // For Chinese: ~1 char = ~1.5 tokens. For English: ~1 word = ~1.3 tokens, ~4 chars = ~1 token.
-    // Use generous estimate: char count × 1.2 + 200 buffer, capped.
+    // Use generous estimate: char count × 1.3 + 200 buffer, capped at 8192 (supported by
+    // all hosted SiliconFlow models and most OpenAI-compatible endpoints).
     const len = (text || '').length;
-    return Math.min(Math.max(Math.ceil(len * 1.3) + 200, 512), 4096);
+    return Math.min(Math.max(Math.ceil(len * 1.3) + 200, 512), 8192);
   }
 
   _buildBillingOptions(text, task, stage = 'primary') {
@@ -489,7 +523,7 @@ ${customPrompt}`;
       },
     );
 
-    const cleaned = response.trim().replace(/^```json?\s*/i, '').replace(/```\s*$/, '');
+    const cleaned = response.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
     return JSON.parse(cleaned);
   }
 
@@ -503,8 +537,10 @@ ${customPrompt}`;
       const newText = change.newText || '';
 
       const idx = remaining.findIndex(exp => {
-        const origMatch = oldText.includes(exp.original) || exp.original.includes(oldText);
-        const modMatch = newText.includes(exp.modified) || exp.modified.includes(newText);
+        const expOriginal = typeof exp.original === 'string' ? exp.original : '';
+        const expModified = typeof exp.modified === 'string' ? exp.modified : '';
+        const origMatch = Boolean(expOriginal) && (oldText.includes(expOriginal) || expOriginal.includes(oldText));
+        const modMatch = Boolean(expModified) && (newText.includes(expModified) || expModified.includes(newText));
         return origMatch || modMatch;
       });
 

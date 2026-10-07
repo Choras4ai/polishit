@@ -1,0 +1,15 @@
+* { box-sizing: border-box; } html, body { margin: 0; background: transparent; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+.mark { position: absolute; border-bottom: 2px solid #db808b; border-radius: 1px; pointer-events: none; }
+.mark.wording, .mark.style { border-color: #d8ad45; } .mark.logic, .mark.deai, .mark.detemplate { border-color: #a18bd2; }
+#card { margin: 6px; padding: 15px 18px; height: calc(100vh - 12px); overflow: auto; background: #fbfefdfa; color: #334d40; border: 1px solid #b8ccbf; border-radius: 13px; box-shadow: 0 2px 6px #1b392b24; }
+header, footer { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+header { font-size: 12px; color: #667b6d; } #category::before { content: '●'; color: #71a489; margin-right: 7px; }
+button { font: inherit; cursor: pointer; background: transparent; border: 0; color: inherit; }
+button:disabled { opacity: .5; cursor: default; } button:focus-visible { outline: 2px solid #327655; outline-offset: 2px; }
+#close { font-size: 22px; line-height: 1; color: #819086; }
+#old { font-size: 12px; color: #ac7880; text-decoration: line-through; line-height: 1.6; margin: 14px 0 4px; overflow-wrap: anywhere; }
+#accept { display: block; width: 100%; text-align: left; border-radius: 6px; padding: 5px 0; color: #247153; font-size: 19px; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
+#accept:hover { background: #e4f0e8; }
+#reason { font-size: 12px; line-height: 1.8; color: #627467; margin: 10px 0; overflow-wrap: anywhere; }
+#status { font-size: 11px; color: #9e554f; } #status:empty { display: none; }
+footer { border-top: 1px solid #dde8e0; padding-top: 10px; font-size: 11px; color: #6b7e71; }

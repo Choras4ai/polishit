@@ -24,7 +24,7 @@
 
   // Preset display
   const presetId = config.provider?.preset || 'together';
-  const preset = presets.list?.find(p => p.id === presetId);
+  const preset = presets.presets?.[presetId];
   document.getElementById('presetDisplay').textContent = preset?.name || presetId;
 
   // Toolbar display

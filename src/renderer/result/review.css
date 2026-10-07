@@ -1,0 +1,119 @@
+/* Side-by-side source review with inline comments. */
+.review-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-soft);
+}
+
+.review-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+  flex: 1;
+  min-height: 0;
+  padding: 8px;
+  background: #f1f7f4;
+}
+
+.review-column {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 5px 18px rgba(23, 68, 52, 0.04);
+}
+
+.review-column-header {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(246, 250, 248, 0.82);
+}
+
+.comparison-label {
+  color: var(--green);
+  font-size: 10px;
+  font-weight: 820;
+  letter-spacing: 0.05em;
+}
+
+.review-column .diff-body {
+  padding: 12px;
+  font-size: 13px;
+  line-height: 1.78;
+}
+
+.polished-body {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  padding: 12px;
+  border: 0;
+  outline: 0;
+  resize: none;
+  background: transparent;
+  color: var(--ink);
+  font: 13px/1.78 Inter, -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", sans-serif;
+  white-space: pre-wrap;
+  overflow: auto;
+}
+
+.inline-opinion {
+  display: inline-flex;
+  align-items: center;
+  max-width: 220px;
+  margin: 2px 4px;
+  padding: 2px 6px;
+  border: 1px solid rgba(8, 127, 91, 0.16);
+  border-radius: 7px;
+  background: var(--mint);
+  color: var(--green-strong);
+  font-size: 9px;
+  font-weight: 650;
+  line-height: 1.35;
+  white-space: normal;
+  vertical-align: middle;
+}
+
+.change-marker[data-state="dismissed"] .inline-opinion {
+  background: var(--surface-soft);
+  color: var(--faint);
+  text-decoration: none;
+}
+
+.change-marker[data-state="accepted"] .inline-opinion {
+  background: rgba(8, 127, 91, 0.13);
+  color: var(--green-strong);
+}
+
+.comparison-panel-compact {
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.comparison-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 12px;
+}
+
+.comparison-content { padding: 0 12px 8px; }
+.comparison-help { color: var(--muted); font-size: 9px; line-height: 1.5; }
+.comparison-toggle { flex: 0 0 auto; }
+
+@media (max-width: 600px) {
+  .review-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .inline-opinion { max-width: 180px; }
+}

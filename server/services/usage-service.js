@@ -19,10 +19,15 @@ async function consumeCredits(db, userId, units, meta) {
   const safeUnits = Math.max(0, Math.ceil(Number(units) || 0));
   if (safeUnits <= 0) return;
 
-  await db.run(
-    'UPDATE users SET credit_balance = MAX(credit_balance - ?, 0), updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-    [safeUnits, userId],
+  const result = await db.run(
+    'UPDATE users SET credit_balance = credit_balance - ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND credit_balance >= ?',
+    [safeUnits, userId, safeUnits],
   );
+  if (!result.changes) {
+    const err = new Error('积分余额不足。');
+    err.status = 402;
+    throw err;
+  }
 
   await db.run(
     `INSERT INTO usage_logs (user_id, kind, units, meta_json, created_at)

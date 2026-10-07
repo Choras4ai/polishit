@@ -25,6 +25,30 @@ function listPaymentMethods(cfg) {
   return providers.filter((provider) => includeAll || declared.has(provider.id));
 }
 
+function assertPaymentProviderAllowed(cfg, provider, readyProviderIds = []) {
+  if (provider === 'manual') {
+    if (cfg.isProduction || cfg.paymentMode !== 'manual') {
+      const err = new Error('请通过支付通道充值积分。');
+      err.status = 403;
+      throw err;
+    }
+    return;
+  }
+
+  if (cfg.paymentMode !== 'online') {
+    const err = new Error('在线支付尚未启用。');
+    err.status = 403;
+    throw err;
+  }
+
+  if (!readyProviderIds.includes(provider)) {
+    const err = new Error('支付通道不可用或尚未配置。');
+    err.status = 503;
+    throw err;
+  }
+}
+
 module.exports = {
+  assertPaymentProviderAllowed,
   listPaymentMethods,
 };

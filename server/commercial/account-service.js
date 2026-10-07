@@ -204,7 +204,7 @@ async function activateMembershipForOrder(db, cfg, order, options = {}) {
   const plan = getMembershipPlan(cfg, order.plan_id);
   const creditsToAdd = Math.max(
     0,
-    Number(plan?.creditsPerPack || order.credits || cfg.membership.creditsPerPack || 0),
+    Number(order.credits || plan?.creditsPerPack || cfg.membership.creditsPerPack || 0),
   );
 
   if (creditsToAdd <= 0) {
@@ -214,8 +214,7 @@ async function activateMembershipForOrder(db, cfg, order, options = {}) {
   }
 
   let freshOrder;
-  await db.exec('BEGIN IMMEDIATE TRANSACTION');
-  try {
+  await db.transaction(async (db) => {
     const markPaid = await db.run(
       `UPDATE orders
           SET status = 'paid',
@@ -263,11 +262,7 @@ async function activateMembershipForOrder(db, cfg, order, options = {}) {
     }
 
     freshOrder = await getOrderById(db, order.id);
-    await db.exec('COMMIT');
-  } catch (err) {
-    await db.exec('ROLLBACK');
-    throw err;
-  }
+  });
 
   return {
     order: buildOrderPayload(freshOrder),

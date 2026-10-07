@@ -5,7 +5,7 @@ const QRCode = require('qrcode');
 const config = require('./config');
 const { logger, requestIdMiddleware } = require('./logger');
 const { openDatabase, initSchema } = require('./db');
-const { getModelList, getModelById } = require('./commercial/models');
+const { getModelList, getModelById, PRICING_VERIFIED_AT } = require('./commercial/models');
 const {
   issueVerificationCode,
   loginWithCode,
@@ -15,56 +15,22 @@ const {
   revokeSession,
   bindDeviceToUser,
 } = require('./services/auth-service');
-const { estimateMessageUnits } = require('./services/usage-service');
+const { validateChatRequest } = require('./services/chat-request');
 const { resolveUpstreamConfig, resolveModelUpstream, proxyChat } = require('./services/upstream-service');
 
-// Consume from users.credit_balance (check-in / free credits)
-async function consumeUserCreditBalance(db, userId, credits, meta) {
-  const safeCredits = Math.max(0.5, Math.round((Number(credits) || 1) * 2) / 2);
-  const result = await db.run(
-    'UPDATE users SET credit_balance = credit_balance - ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND credit_balance >= ?',
-    [safeCredits, userId, safeCredits],
-  );
-  if (!result.changes) {
-    const err = new Error('积分余额不足。');
-    err.status = 402;
-    throw err;
-  }
-  await db.run(
-    `INSERT INTO usage_logs (user_id, kind, units, meta_json, created_at)
-     VALUES (?, 'credit_balance', ?, ?, CURRENT_TIMESTAMP)`,
-    [userId, safeCredits, JSON.stringify(meta || {})],
-  );
-}
-
-async function refundUserCreditBalance(db, userId, credits, meta) {
-  const safeCredits = Math.max(0.5, Math.round((Number(credits) || 1) * 2) / 2);
-  await db.run(
-    'UPDATE users SET credit_balance = credit_balance + ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-    [safeCredits, userId],
-  );
-  await db.run(
-    `INSERT INTO usage_logs (user_id, kind, units, meta_json, created_at)
-     VALUES (?, 'credit_balance_refund', ?, ?, CURRENT_TIMESTAMP)`,
-    [userId, safeCredits, JSON.stringify(meta || {})],
-  );
-}
+const { reserveQuotaForRequest } = require('./services/quota-service');
 
 const {
   activateMembershipForOrder,
   buildCommercialAccount,
   buildOrderPayload,
-  consumeCredits,
-  consumeTrialUse,
   createPendingMembershipOrder,
   getMembershipPlans,
   getOrderById,
   getOrderByIdForUser,
-  refundCredits,
-  refundTrialUse,
   subscribeMembership,
 } = require('./commercial/account-service');
-const { listPaymentMethods } = require('./commercial/payments');
+const { assertPaymentProviderAllowed, listPaymentMethods } = require('./commercial/payments');
 const alipay = require('./commercial/payments/alipay');
 const wechatpay = require('./commercial/payments/wechatpay');
 
@@ -73,12 +39,6 @@ const {
   registerDevice,
   getDeviceByToken,
   buildDeviceAccount,
-  consumeDeviceBalance,
-  consumeDeviceTrial,
-  consumeDeviceCredits,
-  refundDeviceBalance,
-  refundDeviceTrial,
-  refundDeviceCredits,
   addDeviceCredits,
 } = require('./services/device-service');
 const { createRateLimiter, counter } = require('./middleware/rate-limiter');
@@ -88,11 +48,13 @@ const { requestQueue } = require('./middleware/request-queue');
 const { getChatTimeoutMs } = require('../src/commercial/model-timeouts');
 const {
   calculateCreditCharge,
+  calculateMaxOutputTokens,
   getCreditPolicy,
   isBillableTextTooLong,
-  normalizeBillableChars,
 } = require('../src/commercial/credit-policy');
+const { calculateProfitProtectedCreditCharge } = require('../src/commercial/profit-policy');
 const { mountAdmin } = require('./admin');
+const { getBusinessDate, DAILY_CHECKIN_CREDITS } = require('./utils/business-date');
 
 function getPaymentProviderIds() {
   return listPaymentMethods(config)
@@ -102,10 +64,6 @@ function getPaymentProviderIds() {
 
 function nowIso() {
   return new Date().toISOString();
-}
-
-function isLoopbackIp(ip) {
-  return ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(String(ip || ''));
 }
 
 function createBurstGuard({ keyPrefix, limit, windowMs, message, keyFn }) {
@@ -147,8 +105,10 @@ function acquireUsageLock(identity, timeoutMs = USAGE_LOCK_TIMEOUT_MS) {
   activeUsageLocks.set(identity, { timer });
   return () => {
     const entry = activeUsageLocks.get(identity);
-    if (entry) clearTimeout(entry.timer);
-    activeUsageLocks.delete(identity);
+    if (entry?.timer === timer) {
+      clearTimeout(entry.timer);
+      activeUsageLocks.delete(identity);
+    }
   };
 }
 
@@ -178,56 +138,6 @@ function validatePaidOrder(order, providerId, parsed) {
     err.status = 400;
     throw err;
   }
-}
-
-async function reserveQuotaForRequest(params) {
-  const {
-    db,
-    authMode,
-    deviceId,
-    userId,
-    deviceAccount,
-    userAccount,
-    billingMode,
-    creditsToConsume,
-    meta,
-  } = params;
-
-  if (billingMode === 'none') {
-    return async () => {};
-  }
-
-  if (authMode === 'device') {
-    if (billingMode === 'credits') {
-      if (deviceAccount.membership.active && Number(deviceAccount.membership.creditsRemaining || 0) >= creditsToConsume) {
-        await consumeDeviceCredits(db, config, deviceId, creditsToConsume, meta);
-        return () => refundDeviceCredits(db, config, deviceId, creditsToConsume, meta);
-      }
-      await consumeDeviceBalance(db, config, deviceId, creditsToConsume, meta);
-      return () => refundDeviceBalance(db, config, deviceId, creditsToConsume, meta);
-    }
-    if (billingMode === 'trial' && !deviceAccount.membership.active) {
-      await consumeDeviceTrial(db, config, deviceId, meta);
-      return () => refundDeviceTrial(db, config, deviceId, meta);
-    }
-    return async () => {};
-  }
-
-  if (billingMode === 'credits') {
-    if (userAccount.membership.active && userAccount.membership.creditsRemaining >= creditsToConsume) {
-      await consumeCredits(db, config, userId, creditsToConsume, meta);
-      return () => refundCredits(db, config, userId, creditsToConsume, meta);
-    }
-    await consumeUserCreditBalance(db, userId, creditsToConsume, meta);
-    return () => refundUserCreditBalance(db, userId, creditsToConsume, meta);
-  }
-
-  if (billingMode === 'trial' && !userAccount.membership.active) {
-    await consumeTrialUse(db, config, userId, meta);
-    return () => refundTrialUse(db, config, userId, meta);
-  }
-
-  return async () => {};
 }
 
 async function buildQuotaInfo(db, authMode, deviceId, userId) {
@@ -397,7 +307,7 @@ async function main() {
   requestQueue.queueTimeoutMs = config.requestQueue.queueTimeoutMs;
 
   const app = express();
-  app.set('trust proxy', 1);
+  app.set('trust proxy', config.trustProxy);
   const upstream = resolveUpstreamConfig(config);
   const rateLimiter = createRateLimiter(config);
   const deviceRegisterGuard = createBurstGuard({
@@ -419,7 +329,15 @@ async function main() {
     message: '验证码请求过于频繁，请稍后再试。',
     keyFn: (req) => `${req.ip || req.socket?.remoteAddress || 'unknown'}:${String(req.body?.phone || '').replace(/\D+/g, '')}`,
   });
+  const createPaymentGuard = createBurstGuard({
+    keyPrefix: 'payment-create',
+    limit: 12,
+    windowMs: 15 * 60 * 1000,
+    message: '创建支付订单过于频繁，请稍后再试。',
+  });
+  const paymentQueryTimes = new Map();
 
+  app.use(requestIdMiddleware);
   app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
@@ -450,20 +368,23 @@ async function main() {
   app.post('/api/pay/callback/wechat', express.raw({ type: 'application/json' }), async (req, res, next) => {
     try {
       const parsed = wechatpay.verifyAndParseCallback(config, req.headers, req.body.toString('utf8'));
-      if (!parsed.paid) {
-        res.json({ code: 'SUCCESS', message: '忽略未支付状态' });
-        return;
-      }
       const order = await getOrderById(db, parsed.orderId);
       if (!order) {
-        res.json({ code: 'SUCCESS', message: '订单不存在，已忽略' });
-        return;
+        req.log.warn({ provider: 'wechatpay', orderId: parsed.orderId }, 'payment callback references unknown order');
+        const err = new Error('本地订单不存在，请微信支付稍后重试。');
+        err.status = 404;
+        throw err;
       }
+      const alreadyPaid = order.status === 'paid' && Boolean(order.paid_at);
       validatePaidOrder(order, 'wechatpay', parsed);
       await activateMembershipForOrder(db, config, order, {
         providerTradeNo: parsed.providerTradeNo,
         paidMeta: parsed.resource,
       });
+      req.log.info(
+        { provider: 'wechatpay', orderId: order.id, amountCents: parsed.amountCents, alreadyPaid },
+        'payment callback processed',
+      );
       res.json({ code: 'SUCCESS', message: '成功' });
     } catch (err) {
       next(err);
@@ -493,7 +414,6 @@ async function main() {
     }
   });
 
-  app.use(requestIdMiddleware);
   app.use(express.json({ limit: '1mb' }));
   app.use(express.urlencoded({ extended: false }));
 
@@ -683,36 +603,33 @@ async function main() {
     try {
       const session = await getSessionUser(db, config, req.headers.authorization);
       const userId = session.account.userId;
-      const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+      const today = getBusinessDate();
+      const creditsAwarded = DAILY_CHECKIN_CREDITS;
+      const now = new Date().toISOString();
 
-      // Check if already checked in today
-      const existing = await db.get(
-        'SELECT id FROM checkins WHERE user_id = ? AND checkin_date = ?',
-        [userId, today],
-      );
-      if (existing) {
-        return res.json({ ok: false, error: '今天已经签到过了', alreadyCheckedIn: true });
+      // Use transaction + INSERT ON CONFLICT for atomic check-in
+      try {
+        await db.transaction(async (db) => {
+        await db.run(
+          'INSERT INTO checkins (user_id, checkin_date, streak_day, credits_awarded, created_at) VALUES (?, ?, ?, ?, ?)',
+          [userId, today, 1, creditsAwarded, now],
+        );
+        await db.run(
+          'UPDATE users SET credit_balance = credit_balance + ?, updated_at = ? WHERE id = ?',
+          [creditsAwarded, now, userId],
+        );
+        await db.run(
+          `INSERT INTO usage_logs (user_id, kind, units, meta_json, created_at)
+           VALUES (?, 'checkin', ?, ?, ?)`,
+          [userId, creditsAwarded, JSON.stringify({ reward: 'daily_checkin' }), now],
+        );
+        });
+      } catch (txErr) {
+        if (String(txErr?.message || '').includes('UNIQUE')) {
+          return res.json({ ok: false, error: '今天已经签到过了', alreadyCheckedIn: true });
+        }
+        throw txErr;
       }
-
-      const creditsAwarded = 1; // Fixed 1 credit per day
-
-      await db.run(
-        'INSERT INTO checkins (user_id, checkin_date, streak_day, credits_awarded, created_at) VALUES (?, ?, ?, ?, ?)',
-        [userId, today, 1, creditsAwarded, new Date().toISOString()],
-      );
-
-      // Add credits to user
-      await db.run(
-        'UPDATE users SET credit_balance = credit_balance + ?, updated_at = ? WHERE id = ?',
-        [creditsAwarded, new Date().toISOString(), userId],
-      );
-
-      // Log it
-      await db.run(
-        `INSERT INTO usage_logs (user_id, kind, units, meta_json, created_at)
-         VALUES (?, 'checkin', ?, ?, ?)`,
-        [userId, creditsAwarded, JSON.stringify({ reward: 'daily_checkin' }), new Date().toISOString()],
-      );
 
       res.json({
         ok: true,
@@ -728,29 +645,17 @@ async function main() {
     try {
       const session = await getSessionUser(db, config, req.headers.authorization);
       const userId = session.account.userId;
-      const today = new Date().toISOString().slice(0, 10);
+      const today = getBusinessDate();
 
       const todayCheckin = await db.get(
         'SELECT streak_day, credits_awarded FROM checkins WHERE user_id = ? AND checkin_date = ?',
         [userId, today],
       );
 
-      // This week's checkin history
-      const weekAgo = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10);
-      const history = await db.all(
-        'SELECT checkin_date, streak_day, credits_awarded FROM checkins WHERE user_id = ? AND checkin_date >= ? ORDER BY checkin_date',
-        [userId, weekAgo],
-      );
-
-      const checkedDays = history.length;
-
       res.json({
         ok: true,
-        checkedInToday: !!todayCheckin,
-        checkedDays,
-        currentStreak: checkedDays,
-        nextReward: todayCheckin ? null : 1,
-        history,
+        checkedInToday: Boolean(todayCheckin),
+        nextReward: todayCheckin ? null : DAILY_CHECKIN_CREDITS,
       });
     } catch (err) {
       next(err);
@@ -776,12 +681,7 @@ async function main() {
 
   app.post('/api/membership/subscribe', async (req, res, next) => {
     try {
-      // Only allow manual subscribe when paymentMode is 'manual' or from admin/loopback
-      if (config.paymentMode !== 'manual' && !isLoopbackIp(req.ip)) {
-        const err = new Error('请通过支付通道充值积分。');
-        err.status = 403;
-        throw err;
-      }
+      assertPaymentProviderAllowed(config, 'manual', getPaymentProviderIds());
       const session = await getSessionUser(
         db,
         config,
@@ -815,7 +715,7 @@ async function main() {
     });
   });
 
-  app.post('/api/pay/create-order', async (req, res, next) => {
+  app.post('/api/pay/create-order', createPaymentGuard, async (req, res, next) => {
     try {
       const provider = String(req.body?.provider || '').trim();
       const session = await getSessionUser(
@@ -824,6 +724,8 @@ async function main() {
         req.headers.authorization,
         { paymentProviders: getPaymentProviderIds() },
       );
+      const readyProviderIds = getPaymentProviderIds();
+      assertPaymentProviderAllowed(config, provider, readyProviderIds);
 
       if (provider === 'manual') {
         const result = await subscribeMembership(
@@ -897,11 +799,38 @@ async function main() {
         req.headers.authorization,
         { paymentProviders: getPaymentProviderIds() },
       );
-      const order = await getOrderByIdForUser(db, req.params.id, session.account.userId);
+      let order = await getOrderByIdForUser(db, req.params.id, session.account.userId);
       if (!order) {
         const err = new Error('订单不存在。');
         err.status = 404;
         throw err;
+      }
+
+      if (order.provider === 'wechatpay' && order.status === 'pending') {
+        const lastQueryAt = paymentQueryTimes.get(order.id) || 0;
+        if (Date.now() - lastQueryAt >= 10_000) {
+          paymentQueryTimes.set(order.id, Date.now());
+          try {
+            const parsed = await wechatpay.queryOrder(config, order.id);
+            if (parsed.found && parsed.paid) {
+              validatePaidOrder(order, 'wechatpay', parsed);
+              await activateMembershipForOrder(db, config, order, {
+                providerTradeNo: parsed.providerTradeNo,
+                paidMeta: { source: 'active-query', transaction: parsed.resource },
+              });
+              order = await getOrderByIdForUser(db, req.params.id, session.account.userId);
+              req.log.info(
+                { provider: 'wechatpay', orderId: order.id, amountCents: parsed.amountCents },
+                'payment reconciled by active query',
+              );
+            }
+          } catch (queryErr) {
+            req.log.warn(
+              { err: queryErr, provider: 'wechatpay', orderId: order.id },
+              'payment active query failed',
+            );
+          }
+        }
       }
       const user = await buildCommercialAccount(db, config, session.account.userId, {
         sessionExpiresAt: session.account.sessionExpiresAt,
@@ -982,17 +911,11 @@ async function main() {
 
   app.post('/api/ai/chat', rateLimiter, async (req, res, next) => {
     try {
-      const messages = Array.isArray(req.body?.messages) ? req.body.messages : null;
-      const options = req.body?.options || {};
-      const requestedModel = req.body?.model || '';
-      if (!messages || messages.length === 0) {
-        const err = new Error('messages 不能为空。');
-        err.status = 400;
-        throw err;
-      }
-
-      const inputUnits = estimateMessageUnits(messages);
-      const billableChars = normalizeBillableChars(options.billableChars || inputUnits);
+      const { messages, options, requestedModel, inputUnits, billableChars } = validateChatRequest(req.body);
+      const maxOutputTokens = calculateMaxOutputTokens({
+        billableChars,
+        requestedMaxTokens: options.maxTokens,
+      });
 
       // Determine auth mode: device-based or session-based
       let authMode = 'none';
@@ -1053,6 +976,7 @@ async function main() {
       let creditsToConsume = 0;
       let modelDef = null;
       let degraded = false;
+      let profitProtection = null;
 
       if (costDecision.degrade && costDecision.fallbackModel) {
         // Force degraded model
@@ -1089,12 +1013,19 @@ async function main() {
             throw err;
           }
           chatUpstream = resolveModelUpstream(config, requestedModel);
-          creditsToConsume = calculateCreditCharge({
+          modelDef = getModelById(requestedModel);
+          const baseCredits = calculateCreditCharge({
             billableChars,
             modelCredits: chatUpstream.credits,
           });
+          profitProtection = calculateProfitProtectedCreditCharge({
+            messages,
+            maxOutputTokens,
+            model: modelDef,
+            baseCredits,
+          });
+          creditsToConsume = profitProtection.credits;
           billingMode = creditsToConsume > 0 ? 'credits' : 'none';
-          modelDef = getModelById(requestedModel);
           const availableCredits = membershipCredits + freeCredits;
           if (availableCredits < creditsToConsume) {
             const err = new Error(`积分不足（剩余 ${availableCredits}，需要 ${creditsToConsume}），请充值或自配 API。`);
@@ -1104,7 +1035,9 @@ async function main() {
         } else {
           chatUpstream = upstream;
           const standardCharge = calculateCreditCharge({
-            billableChars,
+            // The generic upstream has no model-price metadata: enforce an
+            // actual-input floor so client-supplied counts cannot underpay.
+            billableChars: Math.max(billableChars, inputUnits),
             modelCredits: 1,
           });
           const availableCredits = membershipCredits + freeCredits;
@@ -1132,12 +1065,19 @@ async function main() {
             throw err;
           }
           chatUpstream = resolveModelUpstream(config, requestedModel);
-          creditsToConsume = calculateCreditCharge({
+          modelDef = getModelById(requestedModel);
+          const baseCredits = calculateCreditCharge({
             billableChars,
             modelCredits: chatUpstream.credits,
           });
+          profitProtection = calculateProfitProtectedCreditCharge({
+            messages,
+            maxOutputTokens,
+            model: modelDef,
+            baseCredits,
+          });
+          creditsToConsume = profitProtection.credits;
           billingMode = creditsToConsume > 0 ? 'credits' : 'none';
-          modelDef = getModelById(requestedModel);
           const availableCredits = membershipCredits + freeCredits;
           if (availableCredits < creditsToConsume) {
             const err = new Error(`积分不足（剩余 ${availableCredits}，需要 ${creditsToConsume}），请充值或自配 API。`);
@@ -1147,7 +1087,9 @@ async function main() {
         } else {
           chatUpstream = upstream;
           const standardCharge = calculateCreditCharge({
-            billableChars,
+            // The generic upstream has no model-price metadata: enforce an
+            // actual-input floor so client-supplied counts cannot underpay.
+            billableChars: Math.max(billableChars, inputUnits),
             modelCredits: 1,
           });
           const availableCredits = membershipCredits + freeCredits;
@@ -1193,6 +1135,7 @@ async function main() {
         };
         rollbackQuota = await reserveQuotaForRequest({
           db,
+          config,
           authMode,
           deviceId,
           userId,
@@ -1206,6 +1149,7 @@ async function main() {
         content = await proxyChat(chatUpstream, messages, {
           ...options,
           timeoutMs: proxyTimeoutMs,
+          maxTokens: maxOutputTokens,
         });
         const latencyMs = Date.now() - startTime;
         breaker.recordSuccess(latencyMs);
@@ -1249,10 +1193,20 @@ async function main() {
         model: chatUpstream.model,
         credits: billingMode === 'credits' ? creditsToConsume : 0,
         estimatedCostYuan,
+        maxOutputTokens,
+        pricingVerifiedAt: modelDef ? PRICING_VERIFIED_AT : '',
+        protectedCostCeilingYuan: profitProtection?.guardedUpstreamCost || 0,
+        protectedContributionMargin: profitProtection?.guardedContributionMargin ?? null,
         degraded,
       };
       let quotaInfo = {};
-      quotaInfo = await buildQuotaInfo(db, authMode, deviceId, userId);
+      try {
+        quotaInfo = await buildQuotaInfo(db, authMode, deviceId, userId);
+      } catch (quotaErr) {
+        // Content was already generated and credits consumed — degrade gracefully
+        // instead of failing the whole request and losing the paid result.
+        logger.warn({ err: quotaErr, requestId: req.id }, 'quota snapshot failed after successful chat');
+      }
       quotaCommitted = true;
 
       res.json({
@@ -1288,19 +1242,35 @@ async function main() {
       return;
     }
 
+    // 5xx 内部错误不向客户端泄漏原始异常信息
+    const publicMessage = status >= 500
+      ? '服务器内部错误'
+      : (err.message || '请求失败');
+
     const acceptsHtml = String(_req.headers.accept || '').includes('text/html') && !_req.path.startsWith('/api/');
     if (acceptsHtml) {
-      res.status(status).type('html').send(`<h1 style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;margin:40px;">${err.message || '服务器内部错误'}</h1>`);
+      const escapedMessage = String(publicMessage)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+      res.status(status).type('html').send(`<h1 style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;margin:40px;">${escapedMessage}</h1>`);
       return;
     }
 
+    logger.error(
+      { err, requestId: _req.id, path: _req.path, status },
+      'request failed',
+    );
+
     res.status(status).json({
       ok: false,
-      error: status >= 500 ? '服务器内部错误' : (err.message || '服务器内部错误'),
+      error: publicMessage,
     });
   });
 
   const server = app.listen(config.port, config.host, () => {
+    console.log('[runshi-server] has siliconflow key:', Boolean(config.siliconflow.apiKey));
     logger.info({ host: config.host, port: config.port, db: config.dbPath }, 'server listening');
     logger.info({ sms: config.smsProvider, upstream: upstream.source, payments: getPaymentProviderIds().join(',') || 'none', public: config.publicBaseUrl }, 'server config');
     // Warn if publicBaseUrl is not HTTPS (WeChat Pay requires HTTPS for callbacks)
@@ -1314,7 +1284,7 @@ async function main() {
     try {
       const cutoff = new Date(Date.now() - 30 * 60 * 1000).toISOString();
       const result = await db.run(
-        "UPDATE orders SET status = 'expired', updated_at = CURRENT_TIMESTAMP WHERE status = 'pending' AND created_at < ?",
+        "UPDATE orders SET status = 'expired' WHERE status = 'pending' AND created_at < ?",
         [cutoff],
       );
       if (result.changes > 0) {

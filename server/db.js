@@ -13,7 +13,8 @@ function openDatabase(filename) {
         return;
       }
 
-      resolve({
+      db.configure('busyTimeout', 5000);
+      const connection = {
         raw: db,
         run(sql, params = []) {
           return new Promise((res, rej) => {
@@ -70,7 +71,31 @@ function openDatabase(filename) {
             });
           });
         },
+      };
+      // One SQLite connection must not interleave statements from unrelated
+      // requests inside BEGIN/COMMIT. Transaction callbacks use the raw facade.
+      let pending = Promise.resolve();
+      const enqueue = action => {
+        const result = pending.then(action);
+        pending = result.catch(() => {});
+        return result;
+      };
+      const serialized = { raw: db };
+      for (const method of ['run', 'get', 'all', 'exec', 'close']) {
+        serialized[method] = (...args) => enqueue(() => connection[method](...args));
+      }
+      serialized.transaction = action => enqueue(async () => {
+        await connection.exec('BEGIN IMMEDIATE');
+        try {
+          const result = await action(connection);
+          await connection.exec('COMMIT');
+          return result;
+        } catch (error) {
+          await connection.exec('ROLLBACK').catch(() => {});
+          throw error;
+        }
       });
+      resolve(serialized);
     });
   });
 }
@@ -258,7 +283,7 @@ async function migrateUsageLogsNullable(db) {
   const userIdCol = columns.find(c => c.name === 'user_id');
   if (!userIdCol || !userIdCol.notnull) return; // Already nullable or doesn't exist
 
-  await db.exec(`
+  await db.transaction(tx => tx.exec(`
     CREATE TABLE IF NOT EXISTS usage_logs_new (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER,
@@ -272,7 +297,7 @@ async function migrateUsageLogsNullable(db) {
       SELECT id, user_id, device_id, kind, units, meta_json, created_at FROM usage_logs;
     DROP TABLE usage_logs;
     ALTER TABLE usage_logs_new RENAME TO usage_logs;
-  `);
+  `));
   console.log('[db] migrated usage_logs: user_id is now nullable');
 }
 
@@ -281,7 +306,12 @@ async function migrateUsersPhoneNullable(db) {
   const phoneCol = columns.find(c => c.name === 'phone');
   if (!phoneCol || !phoneCol.notnull) return;
 
-  await db.exec(`
+  // SQLite requires foreign keys disabled before rebuilding a referenced
+  // table; otherwise DROP TABLE cascades into orders, sessions and memberships.
+  await db.exec('PRAGMA foreign_keys = OFF');
+  try {
+    await db.transaction(async tx => {
+      await tx.exec(`
     CREATE TABLE IF NOT EXISTS users_new (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       email TEXT UNIQUE,
@@ -302,6 +332,13 @@ async function migrateUsersPhoneNullable(db) {
     DROP TABLE users;
     ALTER TABLE users_new RENAME TO users;
   `);
+      if ((await tx.all('PRAGMA foreign_key_check')).length) {
+        throw new Error('数据库迁移外键校验失败，已回滚');
+      }
+    });
+  } finally {
+    await db.exec('PRAGMA foreign_keys = ON');
+  }
   console.log('[db] migrated users: phone is now nullable, email column added');
 }
 

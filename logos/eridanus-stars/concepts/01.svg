@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Eridanus — River of Light</title>
+  <desc id="desc">A single midnight-green four-point star, with a flowing river carved into its centre.</desc>
+  <path id="icon" fill="#4F6155" fill-rule="evenodd" d="M256 40 C276 184 314 226 458 256 C314 286 276 328 256 472 C236 328 198 286 54 256 C198 226 236 184 256 40 Z M171 327 C220 303 207 249 260 231 C295 219 319 199 341 180 C316 218 316 257 275 273 C232 289 221 314 171 327 Z"/>
+</svg>

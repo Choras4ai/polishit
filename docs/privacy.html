@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>润石 PoliShit - 隐私政策</title>
+  <meta name="description" content="润石 PoliShit 隐私政策：说明我们如何收集、使用、存储与保护用户个人信息及文本内容。">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; background: #f7fbf9; color: #333; line-height: 1.8; }
+    .container { max-width: 720px; margin: 0 auto; padding: 40px 24px 80px; }
+    h1 { font-size: 24px; margin-bottom: 8px; color: #16231d; }
+    .updated { color: #888; font-size: 13px; margin-bottom: 32px; }
+    h2 { font-size: 17px; margin: 28px 0 12px; color: #16231d; padding-bottom: 8px; border-bottom: 1px solid #e3ebe6; }
+    p, li { font-size: 15px; color: #444; margin-bottom: 8px; }
+    ol, ul { padding-left: 24px; }
+    ol > li { margin-bottom: 12px; }
+    .highlight { background: #eef6f1; padding: 12px 16px; border-radius: 8px; border-left: 4px solid #4A7C6B; margin: 16px 0; }
+    .highlight p { margin: 0; font-weight: 500; color: #3a6255; }
+    table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+    th, td { border: 1px solid #e3ebe6; padding: 8px 10px; text-align: left; vertical-align: top; }
+    th { background: #eef6f1; color: #3a6255; font-weight: 600; }
+    .back { display: inline-block; margin-top: 32px; color: #4A7C6B; text-decoration: none; font-size: 14px; }
+    .back:hover { text-decoration: underline; }
+    a { color: #4A7C6B; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>隐私政策</h1>
+    <p class="updated">最后更新：2026年6月30日 · 生效日期：2026年6月30日</p>
+
+    <p>波江座（长沙）人工智能应用软件有限责任公司（以下简称"我们"）非常重视用户的个人信息与数据安全。本隐私政策说明在您使用「润石 PoliShit」软件及其官网（runshi.top）时，我们如何收集、使用、存储、共享和保护您的信息。请您在使用前仔细阅读本政策。</p>
+
+    <div class="highlight">
+      <p>核心原则：本软件以"按需处理"为准则。我们不将您的文本作为模型训练数据，不主动保留不必要的文本副本；您可随时选择"自配 API 模式"，使文本不经过我们的服务器。</p>
+    </div>
+
+    <h2>一、我们收集的信息</h2>
+    <p>我们仅收集为实现产品功能所必需的信息：</p>
+    <table>
+      <tr><th>类型</th><th>具体内容</th><th>用途</th></tr>
+      <tr><td>账户信息</td><td>邮箱、手机号、验证码、密码（加密存储）、显示名称</td><td>注册、登录鉴权、找回账户</td></tr>
+      <tr><td>设备信息</td><td>设备标识（设备令牌）、操作系统类型、应用版本</td><td>免登录试用、设备绑定、安全风控</td></tr>
+      <tr><td>交易信息</td><td>订单号、积分余额、充值记录、支付回调元数据</td><td>积分结算、订单查询与售后</td></tr>
+      <tr><td>文本内容</td><td>您主动选中并提交处理的中文文本及处理结果</td><td>实时完成润色 / 降AIGC，不用于训练</td></tr>
+      <tr><td>日志与元数据</td><td>请求时间、请求标识、字数、模型名称、错误信息、IP（用于风控）</td><td>故障排查、安全审计、防滥用</td></tr>
+    </table>
+
+    <h2>二、文本内容的处理方式</h2>
+    <ol>
+      <li><strong>自配 API 模式：</strong>文本直接从您的本地设备发送至您自行配置的第三方模型服务，<strong>不经过我们的服务器</strong>，我们无法接触该文本。</li>
+      <li><strong>润石托管（积分）模式：</strong>文本会先发送至我们的后端，由后端转发至上游模型服务（如硅基流动等 OpenAI 兼容接口）完成处理后返回。我们仅在处理过程中临时处理该文本，<strong>不将其作为训练数据，不主动长期留存正文</strong>。</li>
+      <li>软件在启动时可能检查最新版本，仅用于提示更新，<strong>不会上传您的正文内容</strong>。</li>
+    </ol>
+
+    <h2>三、我们如何使用信息</h2>
+    <ul>
+      <li>提供并维护润色、降AIGC 等核心功能；</li>
+      <li>进行账户鉴权、积分结算与订单售后；</li>
+      <li>保障服务安全，识别并防范滥用、欺诈与攻击；</li>
+      <li>排查故障、改进产品稳定性；</li>
+      <li>履行法律法规要求的义务。</li>
+    </ul>
+
+    <h2>四、信息共享与第三方</h2>
+    <ol>
+      <li><strong>上游模型服务商：</strong>托管模式下，文本会转发给第三方 AI 模型服务以完成处理。我们仅传输完成请求所必需的内容。</li>
+      <li><strong>支付通道：</strong>充值时，订单与支付信息会与微信支付、支付宝等持牌支付机构交互，以完成交易。</li>
+      <li>除上述为实现功能所必需的情形、或法律法规要求、或获得您单独同意外，我们<strong>不会向任何第三方出售或共享</strong>您的个人信息。</li>
+    </ol>
+
+    <h2>五、数据存储与安全措施</h2>
+    <ul>
+      <li>传输层使用 HTTPS 加密；账户密码采用单向哈希加盐存储；</li>
+      <li>后端具备请求限流、熔断、成本护栏与异常审计等防护机制；</li>
+      <li>仅保留实现功能所必需的账户、订单与短时元数据，敏感信息按最小化原则处理；</li>
+      <li>数据主要存储于中国境内的服务器。</li>
+    </ul>
+
+    <h2>六、数据保留期限</h2>
+    <p>账户与交易信息在您的账户存续期间保留，并在法律法规要求的期限内留存；处理过程中的正文不作长期留存；日志类元数据按滚动周期清理。注销账户后，我们将在合理期限内删除或匿名化处理您的个人信息（法律另有规定的除外）。</p>
+
+    <h2>七、您的权利</h2>
+    <p>您有权查询、更正、复制您的个人信息，并可申请删除或注销账户。如需行使上述权利，请通过文末联系方式与我们联系。</p>
+
+    <h2>八、未成年人保护</h2>
+    <p>本软件主要面向有中文写作需求的成年用户。我们不面向 14 周岁以下儿童提供服务；若您是未成年人，请在监护人指导下使用，并在监护人同意后提交信息。</p>
+
+    <h2>九、Cookie 与本地存储</h2>
+    <p>桌面客户端使用本地配置存储（如 electron-store）保存您的偏好设置与登录令牌；官网仅使用必要的本地存储维持基本浏览体验，不用于跨站追踪。</p>
+
+    <h2>十、政策更新</h2>
+    <p>我们可能适时更新本政策，更新后的版本将在本页面公布并标注生效日期。重大变更我们会以显著方式提示。</p>
+
+    <h2>十一、联系我们</h2>
+    <p>如对本隐私政策或个人信息处理有任何疑问、投诉或建议，可通过以下方式联系我们：</p>
+    <ul>
+      <li>主体单位：波江座（长沙）人工智能应用软件有限责任公司</li>
+      <li>联系渠道：请通过官网“投诉举报入口”提交隐私、内容或服务相关问题</li>
+      <li>处理时限：收到完整材料后，我们将在合理期限内核查并反馈处理结果</li>
+    </ul>
+
+    <a class="back" href="index.html">← 返回首页</a>
+    <p style="text-align:center;margin-top:32px;font-size:12px;color:#93a29b;line-height:2;">
+      <a href="terms.html" style="color:#93a29b;">用户协议</a> · <a href="security-assessment.html" style="color:#93a29b;">投诉举报入口</a><br>
+      波江座（长沙）人工智能应用软件有限责任公司<br>
+      <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener" style="color:#93a29b;text-decoration:none;">湘ICP备2026023017号-1</a>
+    </p>
+  </div>
+</body>
+</html>

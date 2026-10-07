@@ -33,7 +33,7 @@ function createProvider(providerConfig, commercialConfig = null) {
   const apiUrl = isCustomPreset
     ? (providerConfig?.apiUrl || preset?.apiUrl || '')
     : (preset?.apiUrl || providerConfig?.apiUrl || '');
-  const model = isCustomPreset
+  const model = isCustomPreset || preset?.allowModelOverride
     ? (providerConfig?.model || preset?.model || '')
     : (preset?.model || providerConfig?.model || '');
 

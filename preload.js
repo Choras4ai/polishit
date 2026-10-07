@@ -26,6 +26,14 @@ contextBridge.exposeInMainWorld('polishAPI', {
   onExplanations: on('polish:explanations'),
   onTask: on('polish:task'),
   onReviewContext: on('polish:reviewContext'),
+  onSourceDecision: on('polish:source-decision'),
+  onSourceStatus: on('polish:source-status'),
+  onAutoSourceReview: on('polish:auto-source-review'),
+  startSourceReview: token => ipcRenderer.invoke('source-review:start', token),
+  stopSourceReview: () => ipcRenderer.invoke('source-review:stop'),
+  syncSourceDecision: (token, id, status) => ipcRenderer.invoke('source-review:state', token, id, status),
+  onVariant: on('polish:variant'),
+  onVariantProgress: on('polish:variant-progress'),
 
   // Actions
   replaceText: (text) => ipcRenderer.invoke('action:replace', text),
@@ -58,7 +66,8 @@ contextBridge.exposeInMainWorld('polishAPI', {
   getPresets: () => ipcRenderer.invoke('presets:get'),
 
   // Onboarding
-  completeOnboarding: (presetId) => ipcRenderer.invoke('onboarding:complete', presetId),
+  prepareOnboarding: (presetId) => ipcRenderer.invoke('onboarding:prepare', presetId),
+  completeOnboarding: () => ipcRenderer.invoke('onboarding:complete'),
   openOnboarding: () => ipcRenderer.invoke('window:open-onboarding'),
 
   // Shell
@@ -86,11 +95,14 @@ contextBridge.exposeInMainWorld('polishAPI', {
   // Updates
   getUpdateStatus: () => ipcRenderer.invoke('updates:get-status'),
   checkForUpdates: () => ipcRenderer.invoke('updates:check'),
+  installUpdate: () => ipcRenderer.invoke('updates:install'),
   openLatestRelease: () => ipcRenderer.invoke('updates:open-download'),
 
   // Toolbar
   toolbarAction: (task) => ipcRenderer.invoke('toolbar:action', task),
+  resizeToolbar: (width, height) => ipcRenderer.invoke('toolbar:resize', width, height),
   getToolbarStatus: () => ipcRenderer.invoke('toolbar:get-status'),
   setToolbarEnabled: (enabled) => ipcRenderer.invoke('toolbar:set-enabled', enabled),
+  testToolbar: () => ipcRenderer.invoke('toolbar:test'),
   openAccessibilitySettings: () => ipcRenderer.invoke('toolbar:open-accessibility-settings'),
 });

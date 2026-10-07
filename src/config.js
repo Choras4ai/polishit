@@ -2,6 +2,7 @@
 
 const Store = require('electron-store');
 const { COMMERCIAL_AVAILABLE } = require('./commercial/feature');
+const { PRESETS, PRESET_ALIASES } = require('./ai/presets');
 
 const DEFAULTS = {
   provider: {
@@ -24,6 +25,7 @@ const DEFAULTS = {
   ui: {
     theme: 'system',
     floatingToolbarEnabled: true,
+    multipleVersionsEnabled: true,
   },
   commercial: {
     available: COMMERCIAL_AVAILABLE,
@@ -42,9 +44,9 @@ const DEFAULTS = {
       paymentProviders: [],
       paymentMode: 'manual',
       trial: {
-        total: COMMERCIAL_AVAILABLE ? 10 : 0,
+        total: 0,
         used: 0,
-        remaining: COMMERCIAL_AVAILABLE ? 10 : 0,
+        remaining: 0,
       },
       membership: {
         active: false,
@@ -92,6 +94,17 @@ class ConfigStore {
       name: 'chinese-polish-config',
       defaults: DEFAULTS,
     });
+    const provider = this.store.get('provider');
+    const currentPreset = Object.hasOwn(PRESET_ALIASES, provider?.preset)
+      ? PRESET_ALIASES[provider.preset] : null;
+    if (currentPreset) {
+      const preset = PRESETS[currentPreset];
+      // Built-in presets resolve to a maintained URL/model pair. Migrate both
+      // display fields with the ID, retaining the user's key and extra options.
+      this.store.set('provider', {
+        ...provider, preset: currentPreset, apiUrl: preset.apiUrl, model: preset.model,
+      });
+    }
   }
 
   get(key) {

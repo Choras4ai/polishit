@@ -46,13 +46,13 @@ class CommercialClient {
       ?? rawMembership.monthlyUsed
       ?? 0,
     );
-    const creditsRemaining = Number(
-      payloadMembership.creditsRemaining
-      ?? payloadMembership.monthlyRemaining
-      ?? rawMembership.creditsRemaining
-      ?? rawMembership.monthlyRemaining
-      ?? Math.max(0, creditsTotal - creditsUsed),
-    );
+    const creditsRemaining = (() => {
+      const direct = payloadMembership.creditsRemaining ?? payloadMembership.monthlyRemaining;
+      if (direct != null) return Number(direct);
+      const fromRaw = rawMembership.creditsRemaining ?? rawMembership.monthlyRemaining;
+      if (fromRaw != null && fromRaw !== 0) return Number(fromRaw);
+      return Math.max(0, creditsTotal - creditsUsed);
+    })();
     const membership = {
       ...rawMembership,
       creditsTotal,
@@ -84,7 +84,8 @@ class CommercialClient {
       smsProvider: payload.smsProvider || 'mock',
       paymentProviders: payload.paymentProviders || [],
       paymentMode: payload.paymentMode || 'mock',
-      preferredSource: payload.preferredSource || this.config.get('commercial.preferredSource') || 'hosted',
+      // The request source is a local setting, not cached account metadata.
+      preferredSource: this.config.get('commercial.preferredSource') || 'hosted',
       trial,
       membership,
       availablePlans: payload.availablePlans || [],
@@ -160,12 +161,12 @@ class CommercialClient {
 
     const account = this._normalizeAccount(this.config.get('commercial.account') || {});
     const status = {
+      ...account,
       available: true,
       enabled: this.config.get('commercial.enabled') !== false,
       backendUrl: this._getBaseUrl(),
       preferredSource: this.config.get('commercial.preferredSource') || 'hosted',
       loggedIn: Boolean(account.loggedIn && this._getToken()),
-      ...account,
     };
 
     if (!refresh || !status.loggedIn) {
@@ -184,11 +185,12 @@ class CommercialClient {
       });
       this._setAccountState(merged);
       return {
+        ...merged,
         available: true,
         enabled: status.enabled,
         backendUrl: status.backendUrl,
-        preferredSource: status.preferredSource,
-        ...merged,
+        preferredSource: this.config.get('commercial.preferredSource') || 'hosted',
+        loggedIn: Boolean(merged.loggedIn && this._getToken()),
       };
     } catch (err) {
       if (err.status === 401) {
@@ -198,6 +200,7 @@ class CommercialClient {
           available: true,
           enabled: status.enabled,
           backendUrl: status.backendUrl,
+          preferredSource: this.config.get('commercial.preferredSource') || 'hosted',
           error: err.message,
         };
       }
@@ -248,6 +251,7 @@ class CommercialClient {
       method: 'POST',
       body: { phone, code },
     });
+    if (!payload.token) throw new Error('登录失败：服务端未返回令牌。');
     this.config.set('commercial.authToken', payload.token);
     this._setAccountState(payload.user);
     return {
@@ -272,6 +276,7 @@ class CommercialClient {
       body: { email, password },
       extraHeaders: headers,
     });
+    if (!payload.token) throw new Error('注册失败：服务端未返回令牌。');
     this.config.set('commercial.authToken', payload.token);
     this._setAccountState(payload.user);
     return {
@@ -292,6 +297,7 @@ class CommercialClient {
       body: { email, password },
       extraHeaders: headers,
     });
+    if (!payload.token) throw new Error('登录失败：服务端未返回令牌。');
     this.config.set('commercial.authToken', payload.token);
     this._setAccountState(payload.user);
     return {
@@ -334,7 +340,9 @@ class CommercialClient {
 
   async getOrder(orderId) {
     if (!this.available) return null;
-    return this._request(`/api/pay/orders/${encodeURIComponent(orderId)}`, { auth: true });
+    const payload = await this._request(`/api/pay/orders/${encodeURIComponent(orderId)}`, { auth: true });
+    if (payload.user) this._setAccountState(payload.user);
+    return payload;
   }
 
   async releaseLock() {

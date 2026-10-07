@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Eridanus AI — Stellar Aperture</title>
+  <desc id="desc">Four midnight-green precision facets hold a single four-point star in negative space.</desc>
+  <g id="icon" fill="#4F6155">
+    <path d="M124 80H246C244 188 224 224 188 236C160 245 120 247 80 246V124C80 99.699 99.699 80 124 80Z"/>
+    <path d="M388 80H266C268 188 288 224 324 236C352 245 392 247 432 246V124C432 99.699 412.301 80 388 80Z"/>
+    <path d="M388 432H266C268 324 288 288 324 276C352 267 392 265 432 266V388C432 412.301 412.301 432 388 432Z"/>
+    <path d="M124 432H246C244 324 224 288 188 276C160 267 120 265 80 266V388C80 412.301 99.699 432 124 432Z"/>
+  </g>
+</svg>

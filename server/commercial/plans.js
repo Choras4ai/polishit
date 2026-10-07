@@ -18,7 +18,7 @@ function getMembershipPlans(cfg) {
       creditsPerPack: 300,
       monthlyQuota: 0,
       models,
-      description: `¥9.9 购买 300 基础积分；标准模型单轮约 ${BASE_CHARS_PER_CREDIT} 字 / 1 积分，单次最多 ${MAX_BILLABLE_CHARS} 字。`,
+      description: `¥9.9 购买 300 基础积分；单轮约 ${BASE_CHARS_PER_CREDIT} 字 / 基础积分，按模型倍率与成本保护线计费，单次最多 ${MAX_BILLABLE_CHARS} 字。`,
     },
     {
       planId: 'runshi-pro',
@@ -28,7 +28,7 @@ function getMembershipPlans(cfg) {
       creditsPerPack: 1000,
       monthlyQuota: 0,
       models,
-      description: `¥29.9 购买 1000 基础积分；仍按 ${BASE_CHARS_PER_CREDIT} 字 / 基础积分与模型倍率计费。`,
+      description: `¥29.9 购买 1000 基础积分；按 ${BASE_CHARS_PER_CREDIT} 字 / 基础积分、模型倍率与成本保护线计费。`,
     },
   ];
 }

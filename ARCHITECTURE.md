@@ -22,7 +22,7 @@
 
 | 层级         | 技术                 | 说明                          |
 |-------------|---------------------|-------------------------------|
-| 框架         | Electron 28+        | 跨平台桌面应用               |
+| 框架         | Electron 42.11.2        | 跨平台桌面应用               |
 | 前端         | 原生 HTML/CSS/JS    | 无框架依赖，启动快            |
 | 持久化       | electron-store      | JSON 配置文件，存于用户目录   |
 | AI 接口      | OpenAI / Anthropic / Ollama | 标准 HTTP 调用，支持多服务商预设 |
@@ -171,7 +171,7 @@ APP-中文润色/
 
 | ID        | 名称              | providerType | 需要 Key | 说明                    |
 |-----------|-------------------|-------------|---------|------------------------|
-| together  | Together AI        | openai      | ✗       | 内置免费体验 Key         |
+| together  | Together AI        | openai      | ✓       | 用户自配 API Key         |
 | deepseek  | DeepSeek           | openai      | ✓       | 国产，性价比高           |
 | doubao    | 豆包（字节跳动）    | openai      | ✓       | 火山引擎 API            |
 | gemini    | Google Gemini      | openai      | ✓       | OpenAI 兼容端点         |
@@ -338,7 +338,7 @@ APP-中文润色/
 - URL: `{apiUrl}/chat/completions`
 - 超时: 60 秒 (`AbortSignal.timeout`)
 - 认证: `Bearer {apiKey}`
-- 使用全局 `fetch`（Electron 28+ 内置）
+- 使用全局 `fetch`（Electron 42.11.2 内置）
 
 **修改指南**:
 - 流式支持：添加 `chatStream()` 方法，处理 SSE
@@ -382,7 +382,7 @@ APP-中文润色/
 
 **支持类型**: `openai` | `anthropic` | `ollama`
 
-**内置 Key 逻辑**: 当 preset=`together` 且未填写 apiKey 时，自动调用 `getBuiltinKey()` 注入内置密钥。
+**密钥逻辑**: 自配服务商要求用户填写 API Key；托管模式使用登录令牌访问后端，由后端持有上游密钥。Ollama 本地模式不要求 API Key。
 
 ---
 
@@ -396,10 +396,9 @@ APP-中文润色/
 
 ### M15 — 内置 Key (`src/ai/builtin-key.js`)
 
-**职责**: 存储和解码内置的 Together AI API Key。
+**职责**: 兼容旧调用的空实现，当前不携带上游密钥。
 
-**混淆方式**: XOR 编码 + Base64，运行时解码。
-**安全说明**: 仅防止源码中明文暴露，不能防止逆向工程。生产环境应考虑使用后端代理。
+**安全说明**: 自配 API 密钥保存在当前用户的本地配置文件；托管上游密钥只由服务端环境提供。
 
 ---
 
@@ -603,9 +602,9 @@ Loading ──[polish:result]──→ ResultView（有修改）
 | Node.js 隔离 | `nodeIntegration: false`                            |
 | API 安全     | 白名单 IPC 通道，preload 仅暴露约定方法              |
 | CSP 策略     | `default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'` |
-| 数据隐私     | 无后端、无埋点、配置仅存本地、不存储历史记录          |
+| 数据隐私     | 自配模式直连服务商；托管模式经过后端并保存账户、订单及用量元数据          |
 | 剪贴板保护   | 捕获后异步恢复原始剪贴板内容                         |
-| API Key 存储 | 加密存储于 electron-store（依赖 OS keychain）        |
+| API Key 存储 | electron-store 本地配置文件；当前未使用 OS keychain，不应声称已加密        |
 
 ---
 
@@ -663,7 +662,7 @@ npm run build:mac
 - 添加 `assets/` 托盘图标文件 (tray-iconTemplate.png)
 - 更新 `src/tray.js` — 使用实际图标文件替代空图标
 - 更新 `package.json` — build.files 包含 assets 目录
-- Node.js v20.18.1 安装到 `~/local/node/`，npm 镜像源配置为 npmmirror
+- 开发与构建要求 Node.js 22.12+；审计使用 Node.js 24.20.0
 - 依赖安装验证通过，应用启动无错误
 
 ### v1.0.0 (2026-04-09) — 初始版本

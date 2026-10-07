@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+  xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
+  xsi:type="TaskPaneApp">
+  <Id>2b4ab359-705e-4ff1-84b2-12216349d2f6</Id>
+  <Version>1.0.0.0</Version>
+  <ProviderName>波江座（长沙）人工智能应用软件有限责任公司</ProviderName>
+  <DefaultLocale>zh-CN</DefaultLocale>
+  <DisplayName DefaultValue="润石文档助手" />
+  <Description DefaultValue="在 Word 中安全读取选中文字，生成逐条润色建议并写回文档。" />
+  <IconUrl DefaultValue="https://www.runshi.top/logo-64.png" />
+  <HighResolutionIconUrl DefaultValue="https://www.runshi.top/logo-64.png" />
+  <SupportUrl DefaultValue="https://www.runshi.top/" />
+  <AppDomains>
+    <AppDomain>https://www.runshi.top</AppDomain>
+  </AppDomains>
+  <Hosts>
+    <Host Name="Document" />
+  </Hosts>
+  <DefaultSettings>
+    <SourceLocation DefaultValue="https://www.runshi.top/addins/word/taskpane.html" />
+  </DefaultSettings>
+  <Permissions>ReadWriteDocument</Permissions>
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="VersionOverridesV1_0">
+    <Hosts>
+      <Host xsi:type="Document">
+        <DesktopFormFactor>
+          <GetStarted>
+            <Title resid="GetStarted.Title" />
+            <Description resid="GetStarted.Description" />
+            <LearnMoreUrl resid="GetStarted.LearnMoreUrl" />
+          </GetStarted>
+          <FunctionFile resid="Commands.Url" />
+          <ExtensionPoint xsi:type="PrimaryCommandSurface">
+            <OfficeTab id="TabHome">
+              <Group id="RunShi.Group">
+                <Label resid="RunShi.GroupLabel" />
+                <Icon>
+                  <bt:Image size="16" resid="Icon.16" />
+                  <bt:Image size="32" resid="Icon.32" />
+                  <bt:Image size="80" resid="Icon.80" />
+                </Icon>
+                <Control xsi:type="Button" id="RunShi.OpenTaskPane">
+                  <Label resid="RunShi.ButtonLabel" />
+                  <Supertip>
+                    <Title resid="RunShi.ButtonLabel" />
+                    <Description resid="RunShi.ButtonDescription" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Icon.16" />
+                    <bt:Image size="32" resid="Icon.32" />
+                    <bt:Image size="80" resid="Icon.80" />
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>RunShi.TaskPane</TaskpaneId>
+                    <SourceLocation resid="Taskpane.Url" />
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+        </DesktopFormFactor>
+      </Host>
+    </Hosts>
+    <Resources>
+      <bt:Images>
+        <bt:Image id="Icon.16" DefaultValue="https://www.runshi.top/logo-64.png" />
+        <bt:Image id="Icon.32" DefaultValue="https://www.runshi.top/logo-64.png" />
+        <bt:Image id="Icon.80" DefaultValue="https://www.runshi.top/logo-64.png" />
+      </bt:Images>
+      <bt:Urls>
+        <bt:Url id="GetStarted.LearnMoreUrl" DefaultValue="https://www.runshi.top/" />
+        <bt:Url id="Commands.Url" DefaultValue="https://www.runshi.top/addins/word/taskpane.html" />
+        <bt:Url id="Taskpane.Url" DefaultValue="https://www.runshi.top/addins/word/taskpane.html" />
+      </bt:Urls>
+      <bt:ShortStrings>
+        <bt:String id="GetStarted.Title" DefaultValue="润石文档助手已安装" />
+        <bt:String id="RunShi.GroupLabel" DefaultValue="润石" />
+        <bt:String id="RunShi.ButtonLabel" DefaultValue="润色选区" />
+      </bt:ShortStrings>
+      <bt:LongStrings>
+        <bt:String id="GetStarted.Description" DefaultValue="选中文字，然后从开始选项卡打开润石文档助手。" />
+        <bt:String id="RunShi.ButtonDescription" DefaultValue="读取当前选中文字，生成可逐条接受的润色建议。" />
+      </bt:LongStrings>
+    </Resources>
+  </VersionOverrides>
+</OfficeApp>

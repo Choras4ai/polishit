@@ -7,16 +7,22 @@
         content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'">
   <title>润石 PoliShit</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="review.css">
 </head>
 <body>
   <!-- Title bar -->
   <header class="titlebar" id="titlebar">
     <div class="titlebar-left">
       <span class="app-icon">润</span>
-      <span class="titlebar-label">润石 PoliShit</span>
+      <span class="titlebar-label">润石批注</span>
       <span class="badge" id="changeBadge"></span>
     </div>
     <div class="titlebar-right">
+      <button class="icon-btn icon-btn-refresh" id="btnTitleRecapture" title="刷新当前选区 / 重新开始批阅">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M13.65 5.35a5.5 5.5 0 10.18 4.72.75.75 0 10-1.42-.48A4 4 0 115.6 5.1l-.97.97a.75.75 0 00.53 1.28h3.15a.75.75 0 00.75-.75V3.45a.75.75 0 00-1.28-.53L6.68 4.01a5.5 5.5 0 016.97 1.34z"/>
+        </svg>
+      </button>
       <!-- Mode toggle -->
       <div class="mode-toggle" id="modeToggle">
         <button class="mode-btn active" data-task="polish" title="润色模式">润色</button>
@@ -64,42 +70,61 @@
 
   <!-- Split result view -->
   <section class="result-view hidden" id="resultView">
-    <!-- Upper pane: original with annotations -->
-    <div class="pane pane-top">
-      <div class="pane-header">
-        <span class="pane-title">修改建议</span>
-        <div class="pane-actions">
-          <select class="model-select" id="modelSelect" title="选择模型重新生成"></select>
-          <button class="btn-sm btn-sm-ghost" id="btnRejectAll">全部忽略</button>
-          <button class="btn-sm btn-sm-accent" id="btnAcceptAll">全部接受</button>
-          <button class="btn-sm btn-sm-ghost" id="btnRegenerate" title="换一种润色方案">🔄 换一种</button>
-          <button class="btn-sm btn-sm-ghost" id="btnRecapture" title="重新抓取选中文本">📋 重选</button>
-        </div>
+    <div class="version-rail hidden" id="versionRail">
+      <div class="version-tabs" id="versionTabs"></div>
+      <span class="version-status" id="versionStatus"></span>
+    </div>
+
+    <div class="review-toolbar">
+      <div>
+        <span class="pane-title">原文对照审阅</span>
+        <span class="pane-subtitle" id="reviewModeDescription">修订意见直接标在修订前原文中</span>
       </div>
-      <div class="diff-body" id="diffBody"></div>
-      <div class="pane-footer pane-footer-top">
-        <span class="pane-footer-hint" id="actionHint"></span>
-        <button class="btn-sm btn-sm-primary" id="btnApplyAccepted" disabled title="应用已接受的修改并替换原文">确认选用</button>
+      <select class="model-select" id="modelSelect" title="选择模型重新生成"></select>
+      <button class="btn-sm" id="btnSourceReview" disabled title="在支持定位的原应用上显示下划线和建议浮卡">原文浮窗</button>
+    </div>
+
+    <div class="review-grid">
+      <section class="review-column review-column-original">
+        <div class="review-column-header">
+          <span class="comparison-label">修订前 · 含修订意见</span>
+        </div>
+        <div class="diff-body" id="diffBody"></div>
+      </section>
+      <section class="review-column review-column-polished">
+        <div class="review-column-header">
+          <span class="comparison-label">修订后</span>
+        </div>
+        <textarea class="polished-body" id="polishedBody" readonly></textarea>
+      </section>
+    </div>
+
+    <div class="pane-footer pane-footer-top">
+      <span class="pane-footer-hint" id="actionHint"></span>
+      <div class="footer-actions">
+        <button class="btn-sm btn-sm-ghost" id="btnRejectAll">忽略全部</button>
+        <button class="btn-sm btn-sm-accent" id="btnAcceptAll">接受全部</button>
+        <button class="btn-sm btn-sm-primary" id="btnUsePolished">应用当前方案</button>
       </div>
     </div>
 
-    <!-- Resizable divider -->
-    <div class="pane-divider" id="paneDivider">
-      <div class="divider-grip"></div>
-    </div>
-
-    <!-- Lower pane: polished full text -->
-    <div class="pane pane-bottom">
-      <div class="pane-header">
-        <span class="pane-title">完整修改稿</span>
-      </div>
-      <div class="polished-body" id="polishedBody"></div>
-      <div class="pane-footer pane-footer-bottom">
-        <div class="pane-actions pane-actions-footer">
-          <button class="btn-sm btn-sm-ghost" id="btnCopyPolished" title="复制到剪贴板">复制</button>
-          <button class="btn-sm btn-sm-primary" id="btnUsePolished">直接选用</button>
+    <section class="comparison-panel comparison-panel-compact" id="comparisonPanel">
+      <div class="comparison-header">
+        <div>
+          <span class="pane-title">审阅说明</span>
+          <span class="pane-subtitle">绿色标记为建议修改；每条意见直接跟随原文位置显示</span>
         </div>
+        <button class="utility-btn comparison-toggle" id="btnToggleComparison" type="button">收起</button>
       </div>
+      <div class="comparison-content" id="comparisonContent">
+        <p class="comparison-help">标记下方会直接显示“修改类型 · 修订原因”；悬停标记可以查看替换前后与其他表达，点击建议即可采用。</p>
+      </div>
+    </section>
+    <div class="utility-actions">
+      <button class="utility-btn" id="btnCopyPolished">复制方案</button>
+      <button class="utility-btn" id="btnRegenerate">重新生成</button>
+      <button class="utility-btn" id="btnRecapture">重新选择</button>
+      <button class="btn-sm btn-sm-primary hidden" id="btnApplyAccepted" disabled>完成批阅</button>
     </div>
   </section>
 
@@ -109,15 +134,15 @@
       <span class="popup-type" id="popupType"></span>
       <button class="popup-close" id="popupClose">×</button>
     </div>
-    <div class="popup-suggestion" id="popupSuggestion"></div>
+    <div class="popup-suggestion" id="popupSuggestion" role="button" tabindex="0" title="点击采用这条建议"></div>
     <div class="popup-alternatives hidden" id="popupAlternatives">
-      <div class="popup-alt-label">其他建议：</div>
+      <div class="popup-alt-label">其他表达：</div>
       <div class="popup-alt-list" id="popupAltList"></div>
     </div>
     <div class="popup-reason" id="popupReason"></div>
     <div class="popup-actions">
       <button class="popup-btn popup-btn-dismiss" id="popupDismiss">忽略</button>
-      <button class="popup-btn popup-btn-accept" id="popupAccept">接受修改</button>
+      <button class="popup-btn popup-btn-accept" id="popupAccept">应用到原文</button>
     </div>
   </div>
 
