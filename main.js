@@ -519,6 +519,16 @@ async function handleTrigger(options = {}) {
       text,
       captureResult?.selectionContext || getLastSelectionContext(),
     );
+    if (!lastSelectionEditSession && (
+      cachedSelection?.source === 'clipboard'
+      || isWordBundleIdentifier(captureResult?.selectionContext?.bundleIdentifier)
+    )) {
+      const context = captureResult?.selectionContext || getLastSelectionContext();
+      try {
+        fs.appendFileSync(path.join(app.getPath('userData'), 'polish-errors.log'),
+          `${new Date().toISOString()} source-session-unavailable source=${cachedSelection?.source || 'direct'} bundle=${context?.bundleIdentifier || 'none'} range=${Boolean(context?.selectionRange)} document=${Boolean(context?.documentId)}\n`);
+      } catch (logError) { console.error('[runshi] could not write source log:', logError); }
+    }
     windowManager.sendToResult('polish:reviewContext', {
       surgicalEditing: Boolean(lastSelectionEditSession),
       platform: process.platform,
@@ -1146,6 +1156,12 @@ function registerIPC() {
         selectionRange: { location: geometry.selectionRange.location, length: geometry.selectionRange.length } };
     }
     const result = await sourceReview.start(token);
+    if (!result?.ok) {
+      try {
+        fs.appendFileSync(path.join(app.getPath('userData'), 'polish-errors.log'),
+          `${new Date().toISOString()} word-overlay ${result?.reason || 'unknown'}: ${result?.error || ''}\n`);
+      } catch (logError) { console.error('[runshi] could not write overlay log:', logError); }
+    }
     // start() deliberately advances its epoch once; any additional advancement
     // or changed result/session means another action cancelled this request.
     if (!sameSession() || (result.ok && sourceReview.epoch !== epoch + 1)) {
@@ -1153,7 +1169,10 @@ function registerIPC() {
       return cancelled;
     }
     if (result.ok) resultWindow.hide();
-    else windowManager.focusResult();
+    else {
+      result.error ||= `Word 原文标注暂不可用（${result.reason || '定位失败'}）。请保持选区并重试。`;
+      windowManager.focusResult();
+    }
     return result;
   });
   ipcMain.handle('source-review:stop', event => {

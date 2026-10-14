@@ -26,6 +26,18 @@ function fixture(geometry) {
   return { review, actions, results, statuses, screen, setState: value => { state = value; } };
 }
 
+test('Word overlay waits briefly for transient geometry before giving up', async () => {
+  let attempts = 0;
+  const { review } = fixture(async () => ++attempts < 3
+    ? { ok: false, reason: 'geometry-timeout' }
+    : { ok: true, rects: [{ id: 1, x: 30, y: 40, width: 30, height: 20 }] });
+  try {
+    assert.equal((await review.start('generation-1')).ok, true);
+    assert.equal(attempts, 3);
+    assert.equal(review.overlay.isVisible(), true);
+  } finally { review.destroy(); }
+});
+
 test('source marks pass through clicks, hover opens card, only its current canonical action writes once', async () => {
   const { review, actions, results } = fixture();
   try {

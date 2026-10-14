@@ -56,9 +56,15 @@ class SourceReview {
     await this.windows();
     if (epoch !== this.epoch) return { ok: false, error: '原文浮窗已取消。' };
     this.running = true;
-    const result = await this.refresh();
+    let result;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      result = await this.refresh();
+      if (result?.ok || !this.running || this.epoch !== epoch ||
+        !['geometry-timeout', 'source-element-unavailable', 'source-not-visible', 'host-bounds-unavailable'].includes(result?.reason)) break;
+      await new Promise(resolve => setTimeout(resolve, 120));
+    }
     if (!result?.ok) { this.stop(); return result || { ok: false, error: '当前编辑器无法提供原文位置。' }; }
-    this.geometryTimer = setInterval(() => this.refresh(), 350);
+    this.geometryTimer = setInterval(() => this.refresh(), 600);
     this.pointerTimer = setInterval(() => this.pointer(), 70);
     this.onStatus({ running: true, token, message: '原文浮窗已开启。移到下划线查看建议；返回结果窗可停止。' });
     return { ok: true };
