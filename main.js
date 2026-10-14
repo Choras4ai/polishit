@@ -540,6 +540,7 @@ async function handleTrigger(options = {}) {
     }
   } catch (err) {
     lastSelectionEditSession = null;
+    console.error('[runshi] trigger failed:', err);
     if (!pendingRecaptureRequest) {
       windowManager.sendToResult('polish:error', `处理失败: ${err.message}`);
     }
@@ -639,7 +640,7 @@ function getSourceReviewState(includeGeometry = true, page = 0) {
       windowHandle: session.windowHandle, expectedText: session.bundleIdentifier === 'com.microsoft.Word' && context.wordParagraphSeparator === 'LF'
         ? session.currentText.replace(/\r/g, '\n') : session.currentText,
       selectionRange: { location, length: session.currentText.length },
-      ranges: changes.slice(page * 32, (page + 1) * 32).map(c => ({ id: c.id, location: location + getRelativeChangeStart(session, c), length: c.oldText.length })) } };
+      ranges: changes.slice(page * 32, (page + 1) * 32).map(c => ({ id: c.id, location: location + getRelativeChangeStart(session, c), length: (c.oldText || '').length })) } };
 }
 
 function offerWordSourceReview() {
@@ -1262,6 +1263,7 @@ function registerIPC() {
       }
       await runPipeline(text, { task });
     } catch (err) {
+      console.error('[runshi] reprocess failed:', err);
       windowManager.sendToResult('polish:error', `处理失败: ${err.message}`);
     } finally {
       isProcessing = false;

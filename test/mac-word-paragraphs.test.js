@@ -90,3 +90,15 @@ test('geometry requests can reach suggestions beyond the first 32', () => {
   assert.deepEqual(Array.from(context.getSourceReviewState(true, 1).request.ranges, r => r.id),
     Array.from({ length: 8 }, (_, i) => i + 33));
 });
+
+test('Word source geometry accepts insertion suggestions without oldText', () => {
+  const source = fs.readFileSync(path.resolve(__dirname, '../main.js'), 'utf8');
+  const code = source.slice(source.indexOf('function getSourceReviewState('), source.indexOf('function offerWordSourceReview()'));
+  const session = { generation: 1, currentText: '原文', appliedChanges: new Map(), selectionStart: 0,
+    frontmostPid: 9, elementToken: 'fixture-element', bundleIdentifier: 'com.microsoft.Word' };
+  const changes = [{ id: 1, type: 'insert', newText: '补充', originalStart: 1 }];
+  const context = { sourceReviewData: { session, generation: 1, token: 'token', ignored: new Set(), changes },
+    lastSelectionEditSession: session, getRelativeChangeStart: () => 1 };
+  vm.runInNewContext(code, context);
+  assert.equal(context.getSourceReviewState().request.ranges[0].length, 0);
+});
