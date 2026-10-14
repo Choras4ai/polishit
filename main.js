@@ -541,6 +541,12 @@ async function handleTrigger(options = {}) {
   } catch (err) {
     lastSelectionEditSession = null;
     console.error('[runshi] trigger failed:', err);
+    try {
+      fs.appendFileSync(path.join(app.getPath('userData'), 'polish-errors.log'),
+        `${new Date().toISOString()} first-polish\n${err?.stack || String(err)}\n\n`);
+    } catch (logError) {
+      console.error('[runshi] could not write error log:', logError);
+    }
     if (!pendingRecaptureRequest) {
       windowManager.sendToResult('polish:error', `处理失败: ${err.message}`);
     }
