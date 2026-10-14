@@ -23,6 +23,7 @@ class SourceReview {
     Object.assign(this, { geometry, getState, apply, onDecision, onStatus, openResult });
     this.running = false; this.epoch = 0; this.rects = []; this.lastGeometry = 0;
     this.overlay = null; this.card = null; this.hoverId = null; this.busy = false;
+    this.marksKey = null; this.cardKey = null; this.cardBoundsKey = null;
   }
 
   async windows() {
@@ -64,6 +65,7 @@ class SourceReview {
 
   hide() {
     this.rects = []; this.hoverId = null; this.hoverLine = 0;
+    this.marksKey = null; this.cardKey = null; this.cardBoundsKey = null;
     if (this.overlay && !this.overlay.isDestroyed()) this.overlay.hide();
     if (this.card && !this.card.isDestroyed()) this.card.hide();
   }
@@ -107,10 +109,16 @@ class SourceReview {
       const top = Math.floor(Math.min(...this.rects.map(r => r.y))) - 2;
       const right = Math.ceil(Math.max(...this.rects.map(r => r.x + r.width))) + 2;
       const bottom = Math.ceil(Math.max(...this.rects.map(r => r.y + r.height))) + 3;
-      this.overlay.setBounds({ x: left, y: top, width: right - left, height: bottom - top });
-      this.overlay.webContents.send('source-review:render', { view: 'marks', rects: this.rects.map(r => ({ ...r,
-        x: r.x - left, y: r.y - top, errorType: state.changes.find(c => c.id === r.id)?.errorType })) });
-      this.overlay.showInactive();
+      const bounds = { x: left, y: top, width: right - left, height: bottom - top };
+      const payload = { view: 'marks', rects: this.rects.map(r => ({ ...r,
+        x: r.x - left, y: r.y - top, errorType: state.changes.find(c => c.id === r.id)?.errorType })) };
+      const marksKey = JSON.stringify([bounds, payload.rects]);
+      if (marksKey !== this.marksKey) {
+        this.overlay.setBounds(bounds);
+        this.overlay.webContents.send('source-review:render', payload);
+        this.marksKey = marksKey;
+      }
+      if (!this.overlay.isVisible()) this.overlay.showInactive();
       if (this.hoverId != null) {
         const lines = this.rects.filter(r => r.id === this.hoverId);
         const point = this.electron.screen.getCursorScreenPoint();
@@ -136,9 +144,19 @@ class SourceReview {
     const area = this.electron.screen.getDisplayNearestPoint({ x: Math.round(rect.x), y: Math.round(rect.y) }).workArea;
     this.hoverId = rect.id;
     this.hoverLine = this.rects.filter(r => r.id === rect.id).indexOf(rect);
-    this.card.setBounds(cardBounds(rect, area));
-    this.card.webContents.send('source-review:render', { view: 'card', token: this.token, change });
-    this.card.showInactive();
+    const bounds = cardBounds(rect, area);
+    const boundsKey = JSON.stringify(bounds);
+    const payload = { view: 'card', token: this.token, change };
+    const cardKey = JSON.stringify(payload);
+    if (boundsKey !== this.cardBoundsKey) {
+      this.card.setBounds(bounds);
+      this.cardBoundsKey = boundsKey;
+    }
+    if (cardKey !== this.cardKey) {
+      this.card.webContents.send('source-review:render', payload);
+      this.cardKey = cardKey;
+    }
+    if (!this.card.isVisible()) this.card.showInactive();
   }
 
   pointer() {

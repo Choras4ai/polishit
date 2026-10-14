@@ -8,9 +8,10 @@ function fixture(geometry) {
   class Window {
     constructor(options) { this.options = options; this.visible = false; this.bounds = options;
       this.webContents = new EventEmitter(); this.webContents.setWindowOpenHandler = () => {};
-      this.webContents.send = (_channel, data) => { this.payload = data; }; }
+      this.sendCount = 0; this.boundsCount = 0;
+      this.webContents.send = (_channel, data) => { this.sendCount++; this.payload = data; }; }
     async loadFile() {} isDestroyed() { return false; } setIgnoreMouseEvents(value) { this.clickThrough = value; }
-    setBounds(value) { this.bounds = value; } getBounds() { return this.bounds; }
+    setBounds(value) { this.boundsCount++; this.bounds = value; } getBounds() { return this.bounds; }
     showInactive() { this.visible = true; } hide() { this.visible = false; } isVisible() { return this.visible; }
     destroy() { this.visible = false; }
   }
@@ -105,5 +106,39 @@ test('a wrapped suggestion stays beside the hovered line across refreshes and fo
     assert.equal(review.card.getBounds().y, 128, 'moving into the card preserves its source line');
     point = { x: 45, y: 50 }; review.pointer();
     assert.equal(review.card.getBounds().y, 68, 'the same suggestion can follow another source line');
+  } finally { review.destroy(); }
+});
+
+test('unchanged geometry and card content do not redraw native overlay windows', async () => {
+  const { review } = fixture();
+  try {
+    await review.start('generation-1');
+    const markSends = review.overlay.sendCount, markBounds = review.overlay.boundsCount;
+    review.pointer();
+    const cardSends = review.card.sendCount, cardBounds = review.card.boundsCount;
+    await review.refresh();
+    assert.equal(review.overlay.sendCount, markSends);
+    assert.equal(review.overlay.boundsCount, markBounds);
+    assert.equal(review.card.sendCount, cardSends);
+    assert.equal(review.card.boundsCount, cardBounds);
+  } finally { review.destroy(); }
+});
+
+test('geometry and suggestion content changes redraw only the affected window', async () => {
+  let x = 30;
+  const { review, setState } = fixture(async () => ({ ok: true, rects: [{ id: 1, x, y: 40, width: 30, height: 20 }] }));
+  try {
+    await review.start('generation-1'); review.pointer();
+    const markSends = review.overlay.sendCount, cardSends = review.card.sendCount;
+    const cardBounds = review.card.boundsCount;
+    x = 60; await review.refresh();
+    assert.equal(review.overlay.sendCount, markSends + 1);
+    assert.equal(review.card.sendCount, cardSends, 'moving the same suggestion must not rebuild card content');
+    assert.equal(review.card.boundsCount, cardBounds + 1, 'moving the suggestion must reposition its card');
+    setState({ token: 'generation-1', changes: [{ id: 1, oldText: '旧', newText: '更新', reason: '新理由' }], request: {} });
+    await review.refresh();
+    assert.equal(review.overlay.sendCount, markSends + 1);
+    assert.equal(review.card.sendCount, cardSends + 1, 'same id with changed content must refresh the card');
+    assert.equal(review.card.payload.change.newText, '更新');
   } finally { review.destroy(); }
 });
