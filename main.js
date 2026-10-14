@@ -625,7 +625,7 @@ function buildSelectionEditSession(text, selectionContext) {
   };
 }
 
-function getSourceReviewState(includeGeometry = true) {
+function getSourceReviewState(includeGeometry = true, page = 0) {
   const data = sourceReviewData, session = lastSelectionEditSession;
   if (!data || data.session !== session || session.generation !== data.generation) return null;
   const changes = data.changes.filter(c => !session.appliedChanges.has(c.id) && !data.ignored.has(c.id));
@@ -638,7 +638,7 @@ function getSourceReviewState(includeGeometry = true) {
       windowHandle: session.windowHandle, expectedText: session.bundleIdentifier === 'com.microsoft.Word' && context.wordParagraphSeparator === 'LF'
         ? session.currentText.replace(/\r/g, '\n') : session.currentText,
       selectionRange: { location, length: session.currentText.length },
-      ranges: changes.slice(0, 32).map(c => ({ id: c.id, location: location + getRelativeChangeStart(session, c), length: c.oldText.length })) } };
+      ranges: changes.slice(page * 32, (page + 1) * 32).map(c => ({ id: c.id, location: location + getRelativeChangeStart(session, c), length: c.oldText.length })) } };
 }
 
 function offerWordSourceReview() {

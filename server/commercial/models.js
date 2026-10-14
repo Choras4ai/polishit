@@ -2,13 +2,13 @@
 
 /**
  * Curated Chinese-writing catalog, verified against the authenticated .cn
- * /v1/models endpoint and https://www.siliconflow.cn/pricing on 2026-09-15.
+ * /v1/models endpoint and https://www.siliconflow.cn/pricing on 2026-10-14.
  * Do not import every upstream model: code-only, retired and less familiar
  * families stay out of the consumer picker. Prices are CNY per 1M tokens.
  * Flash uses the regular-hours rate as the conservative cost ceiling;
  * the existing profit guard also covers prompt size and output allowance.
  */
-const PRICING_VERIFIED_AT = '2026-09-15';
+const PRICING_VERIFIED_AT = '2026-10-14';
 const MEMBERSHIP_MODELS = [
   { id: 'qwen3-8b', name: '通义千问 Qwen3-8B', provider: '通义千问',
     model: 'Qwen/Qwen3-8B', credits: 1, description: '基础文字整理与短句修改', badge: '基础', tier: '基础',

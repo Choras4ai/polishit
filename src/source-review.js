@@ -23,7 +23,7 @@ class SourceReview {
     Object.assign(this, { geometry, getState, apply, onDecision, onStatus, openResult });
     this.running = false; this.epoch = 0; this.rects = []; this.lastGeometry = 0;
     this.overlay = null; this.card = null; this.hoverId = null; this.busy = false;
-    this.marksKey = null; this.cardKey = null; this.cardBoundsKey = null;
+    this.marksKey = null; this.cardKey = null; this.cardBoundsKey = null; this.page = 0;
   }
 
   async windows() {
@@ -52,6 +52,7 @@ class SourceReview {
     if (!token || this.getState()?.token !== token) return { ok: false, error: '这组修订已经过期，请重新分析。' };
     const epoch = this.epoch;
     this.token = token;
+    this.page = 0;
     await this.windows();
     if (epoch !== this.epoch) return { ok: false, error: '原文浮窗已取消。' };
     this.running = true;
@@ -93,17 +94,25 @@ class SourceReview {
     if (!state || state.token !== this.token || state.uncertain) { this.stop(); return { ok: false, error: '原文会话已变化，请重新分析。' }; }
     this.pending = true;
     try {
-      const result = await this.geometry(state.request);
-      if (!this.running || this.epoch !== epoch || this.getState()?.token !== state.token) return;
-      if (!result?.ok) {
-        this.hide();
-        this.onStatus({ running: true, token: this.token, message: result?.error || '原文暂不可定位；已隐藏浮窗。切回原应用后重新定位。' });
-        return result;
-      }
       const ids = new Set(state.changes.map(c => c.id));
-      this.rects = (result.rects || []).filter(r => ids.has(r.id) && validRect(r)).map(r => ({ ...r,
-        ...(result.coordinateSpace === 'physical' ? this.electron.screen.screenToDipRect(null, r) : {}) }));
-      if (!this.rects.length) { this.hide(); return { ok: false, error: '当前可见原文中没有可定位的待处理修订。' }; }
+      const pages = Math.max(1, Math.ceil(state.changes.length / 32));
+      let visible = false;
+      for (let attempt = 0; attempt < pages; attempt++) {
+        const page = (this.page + attempt) % pages;
+        const request = attempt === 0 && page === 0 ? state.request : this.getState(true, page)?.request;
+        const result = await this.geometry(request);
+        if (!this.running || this.epoch !== epoch || this.getState(false)?.token !== state.token) return;
+        if (!result?.ok && result?.reason !== 'source-not-visible') {
+          this.hide();
+          this.onStatus({ running: true, token: this.token, message: result?.error || '原文暂不可定位；已隐藏浮窗。切回原应用后重新定位。' });
+          return result;
+        }
+        this.rects = (result?.rects || []).filter(r => ids.has(r.id) && validRect(r)).map(r => ({ ...r,
+          ...(result.coordinateSpace === 'physical' ? this.electron.screen.screenToDipRect(null, r) : {}) }));
+        if (this.rects.length) { this.page = page; visible = true; break; }
+        this.hide();
+      }
+      if (!visible) return { ok: false, error: '当前可见原文中没有可定位的待处理修订。' };
       this.lastGeometry = Date.now();
       const left = Math.floor(Math.min(...this.rects.map(r => r.x))) - 2;
       const top = Math.floor(Math.min(...this.rects.map(r => r.y))) - 2;

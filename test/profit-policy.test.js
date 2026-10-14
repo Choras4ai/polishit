@@ -16,7 +16,7 @@ const {
 
 test('hosted model catalog uses current IDs and excludes retired entries', () => {
   const ids = new Set(MEMBERSHIP_MODELS.map(model => model.model));
-  assert.equal(PRICING_VERIFIED_AT, '2026-09-15');
+  assert.equal(PRICING_VERIFIED_AT, '2026-10-14');
   assert.equal(DEFAULT_MODEL_ID, 'deepseek-v4-flash');
   assert.equal(ids.has('Pro/moonshotai/Kimi-K2.5'), false);
   assert.equal(ids.has('Pro/zai-org/GLM-4.7'), false);

@@ -124,6 +124,28 @@ test('unchanged geometry and card content do not redraw native overlay windows',
   } finally { review.destroy(); }
 });
 
+test('source review searches later suggestion pages when the first 32 are offscreen', async () => {
+  const calls = [];
+  let visiblePage = 1;
+  const { review } = fixture(async request => {
+    calls.push(request.page);
+    return request.page === visiblePage
+      ? { ok: true, rects: [{ id: request.page ? 33 : 1, x: 30, y: 40, width: 30, height: 20 }] }
+      : { ok: false, reason: 'source-not-visible', rects: [] };
+  });
+  review.getState = (_includeGeometry, page = 0) => ({ token: 'generation-1',
+    changes: Array.from({ length: 40 }, (_, i) => ({ id: i + 1, oldText: '字' })), request: { page } });
+  try {
+    assert.equal((await review.start('generation-1')).ok, true);
+    assert.deepEqual(calls, [0, 1]);
+    assert.equal(review.rects[0].id, 33);
+    visiblePage = 0;
+    assert.equal((await review.refresh()).ok, true);
+    assert.deepEqual(calls, [0, 1, 1, 0]);
+    assert.equal(review.rects[0].id, 1);
+  } finally { review.destroy(); }
+});
+
 test('geometry and suggestion content changes redraw only the affected window', async () => {
   let x = 30;
   const { review, setState } = fixture(async () => ({ ok: true, rects: [{ id: 1, x, y: 40, width: 30, height: 20 }] }));

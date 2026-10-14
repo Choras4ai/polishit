@@ -75,3 +75,18 @@ test('hover state skips range projection while retaining current decisions', () 
   assert.deepEqual(Array.from(context.getSourceReviewState(false).changes, c => c.id), [2]);
   assert.equal(context.getSourceReviewState(false).request, undefined);
 });
+
+test('geometry requests can reach suggestions beyond the first 32', () => {
+  const source = fs.readFileSync(path.resolve(__dirname, '../main.js'), 'utf8');
+  const code = source.slice(source.indexOf('function getSourceReviewState('), source.indexOf('function offerWordSourceReview()'));
+  const session = { generation: 1, currentText: '字'.repeat(80), appliedChanges: new Map(), selectionStart: 0,
+    frontmostPid: 9, elementToken: 'fixture-element', bundleIdentifier: 'com.microsoft.Word' };
+  const changes = Array.from({ length: 40 }, (_, i) => ({ id: i + 1, oldText: '字' }));
+  const context = { sourceReviewData: { session, generation: 1, token: 'token', ignored: new Set(), changes },
+    lastSelectionEditSession: session, getRelativeChangeStart: (_session, change) => change.id - 1 };
+  vm.runInNewContext(code, context);
+  assert.deepEqual(Array.from(context.getSourceReviewState(true, 0).request.ranges, r => r.id),
+    Array.from({ length: 32 }, (_, i) => i + 1));
+  assert.deepEqual(Array.from(context.getSourceReviewState(true, 1).request.ranges, r => r.id),
+    Array.from({ length: 8 }, (_, i) => i + 33));
+});

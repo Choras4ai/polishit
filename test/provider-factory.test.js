@@ -32,12 +32,13 @@ test('custom preset keeps explicit user configuration', () => {
   assert.equal(provider.model, 'test-model');
 });
 
-test('SiliconFlow picker contains the five current models with matching provider names', () => {
+test('SiliconFlow picker contains current mainstream models with matching provider names', () => {
   const current = PRESET_ORDER.filter(id => id.startsWith('siliconflow-'));
   assert.deepEqual(current.map(id => PRESETS[id].model), [
     'deepseek-ai/DeepSeek-V4-Flash',
     'deepseek-ai/DeepSeek-V4-Pro',
     'zai-org/GLM-5.3',
+    'zai-org/GLM-5.3-Flash',
     'Qwen/Qwen3.8-27B',
     'Pro/moonshotai/Kimi-K2.6',
   ]);

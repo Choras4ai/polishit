@@ -4,6 +4,8 @@
 
 当前版本：**[v1.6.12](https://github.com/Choras4ai/polishit/releases/tag/v1.6.12)** · [更新日志](CHANGELOG.md) · [波江座 NEO LAB](https://www.runshi.top/lab/)
 
+当前源码另有未发布的原文长文定位与硅基流动模型更新，供本地测试。
+
 [下载 macOS Apple Silicon](https://github.com/Choras4ai/polishit/releases/download/v1.6.12/runshi-polis-1.6.12-arm64.dmg) · [下载 Windows x64](https://github.com/Choras4ai/polishit/releases/download/v1.6.12/runshi-polis-setup-1.6.12.exe)
 
 ### 1.6.12 更新
