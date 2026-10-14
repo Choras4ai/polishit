@@ -98,6 +98,11 @@ async function proxyChat(upstream, messages, options = {}) {
       });
 
       if (!response.ok) {
+        if (response.status === 402) {
+          const err = new Error('模型服务额度不足，请联系润石客服；本次请求未完成。');
+          err.status = 424;
+          throw err;
+        }
         const err = new Error(`上游模型请求失败 (${response.status})`);
         err.status = isRetryableStatus(response.status) ? 503 : 502;
         err.retryable = isRetryableStatus(response.status);

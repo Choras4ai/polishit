@@ -44,3 +44,13 @@ test('direct API calls use the same large-model timeout as hosted requests', asy
   });
   assert.deepEqual(calls, [180000, 60000]);
 });
+
+test('hosted upstream payment-required error identifies server quota without retrying', async t => {
+  let calls = 0;
+  t.mock.method(global, 'fetch', async () => { calls++; return { ok: false, status: 402 }; });
+  await assert.rejects(
+    proxyChat({ providerType: 'openai', apiUrl: 'https://fixture', apiKey: 'x', model: 'x' }, []),
+    error => error.status === 424 && /模型服务额度不足/.test(error.message),
+  );
+  assert.equal(calls, 1);
+});

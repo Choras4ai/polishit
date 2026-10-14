@@ -406,7 +406,8 @@ async function runPipeline(text, { task, progressPrefix, temperatureOverride, mo
       }).catch((err) => { console.error('[runshi] explainPromise error:', err.message); });
     }
 
-    await refreshCommercialAccount();
+    // Account balance is unrelated to source geometry; do not delay Word marks.
+    void refreshCommercialAccount();
     return result;
   } catch (err) {
     if (!isActiveRun()) return;
