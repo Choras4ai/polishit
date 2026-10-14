@@ -2,9 +2,14 @@
 
 跨平台（macOS / Windows）中文文本润色桌面应用。选中文字，一键润色 / 降AIGC，Grammarly 风格逐条审阅。
 
-当前版本：**[v1.6.11](https://github.com/Choras4ai/polishit/releases/tag/v1.6.11)** · [更新日志](CHANGELOG.md) · [波江座 NEO LAB](https://www.runshi.top/lab/)
+当前版本：**[v1.6.12](https://github.com/Choras4ai/polishit/releases/tag/v1.6.12)** · [更新日志](CHANGELOG.md) · [波江座 NEO LAB](https://www.runshi.top/lab/)
 
-[下载 macOS Apple Silicon](https://github.com/Choras4ai/polishit/releases/download/v1.6.11/runshi-polis-1.6.11-arm64.dmg) · [下载 Windows x64](https://github.com/Choras4ai/polishit/releases/download/v1.6.11/runshi-polis-setup-1.6.11.exe)
+[下载 macOS Apple Silicon](https://github.com/Choras4ai/polishit/releases/download/v1.6.12/runshi-polis-1.6.12-arm64.dmg) · [下载 Windows x64](https://github.com/Choras4ai/polishit/releases/download/v1.6.12/runshi-polis-setup-1.6.12.exe)
+
+### 1.6.12 更新
+
+- 原文建议悬停时减少重复文字范围计算，提升跟随流畅度。
+- Mac Word 原文建议、点击和连续写回通过实际流程测试；Windows Word 真机仍待验收。
 
 ### 1.6.11 更新
 
@@ -13,7 +18,7 @@
 - Word 已开启原生“修订”时，写入前提示关闭后重试。
 - Windows 已完成自动化与打包检查，尚未完成 Word 真机验收。其他编辑器的原文浮窗取决于辅助功能接口支持，不支持时使用结果窗审阅。
 
-历史补档版本的安装包和校验值见 Releases；部分历史版本没有保存完整源码快照，其归档标签仅包含版本说明和校验清单，不代表可重建源码。当前 main 分支是 1.6.11 源码。
+历史补档版本的安装包和校验值见 Releases；部分历史版本没有保存完整源码快照，其归档标签仅包含版本说明和校验清单，不代表可重建源码。当前 main 分支是 1.6.12 源码。
 
 ## 主要功能
 

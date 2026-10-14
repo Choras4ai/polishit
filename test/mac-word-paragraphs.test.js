@@ -44,7 +44,7 @@ test('Mac Word keeps native CR geometry and rejects different text or CRLF offse
 
 test('geometry uses current LF Word text while source edit baseline stays CR after length-changing edits', () => {
   const source = fs.readFileSync(path.resolve(__dirname, '../main.js'), 'utf8');
-  const code = source.slice(source.indexOf('function getSourceReviewState()'), source.indexOf('function prepareReprocessBaseText()'));
+  const code = source.slice(source.indexOf('function getSourceReviewState('), source.indexOf('function prepareReprocessBaseText()'));
   const session = { generation: 1, originalText: original, currentText: '第一段修改。\r第二段。\r', appliedChanges: new Map(),
     bundleIdentifier: 'com.microsoft.Word', documentId: 'fixture-document', windowHandle: null,
     geometryContext: { frontmostPid: 9, elementToken: 'fixture-element', selectionRange: { location: 100 }, wordParagraphSeparator: 'LF' } };
@@ -58,4 +58,20 @@ test('geometry uses current LF Word text while source edit baseline stays CR aft
   assert.equal(session.currentText, '第一段修改。\r第二段。\r');
   session.bundleIdentifier = 'win32.word';
   assert.equal(context.getSourceReviewState().request.expectedText, session.currentText, 'Windows COM geometry remains CR');
+});
+
+test('hover state skips range projection while retaining current decisions', () => {
+  const source = fs.readFileSync(path.resolve(__dirname, '../main.js'), 'utf8');
+  const code = source.slice(source.indexOf('function getSourceReviewState('), source.indexOf('function offerWordSourceReview()'));
+  const session = { generation: 1, appliedChanges: new Map(), sourceStateUncertain: false };
+  const data = { session, generation: 1, token: 'token', ignored: new Set(), changes: [{ id: 1 }, { id: 2 }] };
+  let projections = 0;
+  const context = { sourceReviewData: data, lastSelectionEditSession: session,
+    getRelativeChangeStart: () => { projections++; return 0; } };
+  vm.runInNewContext(code, context);
+  assert.deepEqual(Array.from(context.getSourceReviewState(false).changes, c => c.id), [1, 2]);
+  assert.equal(projections, 0);
+  data.ignored.add(1);
+  assert.deepEqual(Array.from(context.getSourceReviewState(false).changes, c => c.id), [2]);
+  assert.equal(context.getSourceReviewState(false).request, undefined);
 });

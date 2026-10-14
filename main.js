@@ -625,10 +625,11 @@ function buildSelectionEditSession(text, selectionContext) {
   };
 }
 
-function getSourceReviewState() {
+function getSourceReviewState(includeGeometry = true) {
   const data = sourceReviewData, session = lastSelectionEditSession;
   if (!data || data.session !== session || session.generation !== data.generation) return null;
   const changes = data.changes.filter(c => !session.appliedChanges.has(c.id) && !data.ignored.has(c.id));
+  if (!includeGeometry) return { token: data.token, changes, uncertain: session.sourceStateUncertain };
   const context = session.geometryContext || { frontmostPid: session.frontmostPid, elementToken: session.elementToken,
     selectionRange: { location: session.selectionStart } };
   const location = context.selectionRange.location;

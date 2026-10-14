@@ -1,19 +1,19 @@
 {
-  "version": "1.6.11",
-  "name": "润石 PoliShit 1.6.11",
-  "publishedAt": "2026-10-05T09:40:18.701778+00:00",
-  "notes": "Mac Word 分析完成后自动显示原文下划线与悬停建议，可直接接受、忽略。修复接受全部首条写入后误判失败；显示逐条进度，失败保持待处理，保留已忽略建议。Word 已开启原生修订时，在写入前提示关闭后重试。250 项回归、真实 Mac Word 多段批量写回与修订模式保护通过。",
+  "version": "1.6.12",
+  "name": "润石 PoliShit 1.6.12",
+  "publishedAt": "2026-10-14T14:51:12Z",
+  "notes": "优化原文建议卡片的悬停响应，鼠标移动时不再重复计算全部文字范围。253 项自动测试、界面流程和真实 macOS Word 的悬停、点击、连续写回、过期状态拒绝测试通过。Windows Word 真机尚未验收。",
   "pageUrl": "https://www.runshi.top/#download",
   "downloads": {
-    "darwin-arm64": "https://www.runshi.top/downloads/runshi-polis-1.6.11-arm64.dmg",
-    "win32-x64": "https://www.runshi.top/downloads/runshi-polis-setup-1.6.11.exe"
+    "darwin-arm64": "https://www.runshi.top/downloads/runshi-polis-1.6.12-arm64.dmg",
+    "win32-x64": "https://www.runshi.top/downloads/runshi-polis-setup-1.6.12.exe"
   },
   "sha256": {
-    "darwin-arm64": "dc97c42f75fe85848eff432569805f6dde078eedcb79b01138d26cf6b4ce5c0a",
-    "win32-x64": "f9000ddc8bedc479a9de55f7674f685536a85b2c7991e3902c86f345cf9cbed8"
+    "darwin-arm64": "06ca4231b284e7bc64cebb4caf51779c8649eab10a0550e0deee22ae3e279a6b",
+    "win32-x64": "44d11dfaa1d28120091348037c5cd314fb2274cb0572d31101a5647bdf00214f"
   },
   "sizes": {
-    "darwin-arm64": 134740749,
-    "win32-x64": 115301235
+    "darwin-arm64": 134743250,
+    "win32-x64": 115301448
   }
 }

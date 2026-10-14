@@ -161,7 +161,8 @@ class SourceReview {
 
   pointer() {
     if (!this.running || this.busy) return;
-    const state = this.getState();
+    // Hover only needs the current decision state; range projection belongs to geometry refresh.
+    const state = this.getState(false);
     if (!state || state.token !== this.token || state.uncertain) return this.stop();
     if (Date.now() - this.lastGeometry > 1800) return this.hide();
     const point = this.electron.screen.getCursorScreenPoint();
@@ -181,7 +182,7 @@ class SourceReview {
 
   async action(sender, payload) {
     if (!this.card || sender !== this.card.webContents) return { ok: false, error: '无效的浮窗请求。' };
-    const state = this.getState();
+    const state = this.getState(false);
     if (!this.running || this.busy || payload?.token !== this.token || state?.token !== this.token
       || state.uncertain || payload.id !== this.hoverId) return { ok: false, error: '修订已变化，请重新打开建议。' };
     if (payload.action === 'results') { this.stop(); this.openResult(); return { ok: true }; }
