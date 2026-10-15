@@ -299,9 +299,10 @@ async function probeSelectionContext() {
   if (isWin) return windowsReviewHelper.probe();
   if (isWordBundleIdentifier(lastFrontApp)) {
     try {
-      return await probeWordSelectionContext();
+      const context = await probeWordSelectionContext();
+      if (context) return context;
     } catch (_) {
-      return null;
+      // The native accessibility probe below may still identify Word.
     }
   }
 
@@ -310,6 +311,10 @@ async function probeSelectionContext() {
     const payload = await selectionHelper.probe();
     if (!payload || payload.trusted === false) return null;
     if (isOwnBundleIdentifier(payload.bundleIdentifier)) return null;
+    if (isWordBundleIdentifier(payload.bundleIdentifier)) {
+      const context = await probeWordSelectionContext().catch(() => null);
+      if (context) return context;
+    }
     const selectionRange = normalizeSelectionRange(payload.selectionRange);
     return {
       text: typeof payload.text === 'string' ? payload.text : '',

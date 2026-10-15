@@ -660,8 +660,13 @@ function getSourceReviewState(includeGeometry = true, page = 0) {
 }
 
 function offerWordSourceReview() {
-  if (!isMac || pendingRecaptureRequest || !isWordBundleIdentifier(lastSelectionEditSession?.bundleIdentifier)) return;
+  if (!isMac) return;
   const state = getSourceReviewState();
+  try {
+    fs.appendFileSync(path.join(app.getPath('userData'), 'polish-errors.log'),
+      `${new Date().toISOString()} overlay-offer source=${lastSelectionSnapshot?.source || 'none'} bundle=${lastSelectionEditSession?.bundleIdentifier || 'none'} changes=${state?.changes?.length ?? 'none'} pending=${pendingRecaptureRequest}\n`);
+  } catch (logError) { console.error('[runshi] could not write overlay log:', logError); }
+  if (pendingRecaptureRequest || !isWordBundleIdentifier(lastSelectionEditSession?.bundleIdentifier)) return;
   if (state?.changes.length) windowManager.sendToResult('polish:auto-source-review', state.token);
 }
 

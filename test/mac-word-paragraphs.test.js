@@ -102,3 +102,16 @@ test('Word source geometry accepts insertion suggestions without oldText', () =>
   vm.runInNewContext(code, context);
   assert.equal(context.getSourceReviewState().request.ranges[0].length, 0);
 });
+
+test('native Word identity recovers the document context when foreground lookup misses', async () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'src', 'capture.js'), 'utf8');
+  const code = source.slice(source.indexOf('async function probeSelectionContext()'), source.indexOf('/**\n * Re-activate the previously frontmost app.', source.indexOf('async function probeSelectionContext()')));
+  const word = { text: '测试原文', bundleIdentifier: 'com.microsoft.Word', documentId: 'doc-1',
+    selectionRange: { location: 4, length: 4 }, supportsRangeEditing: true };
+  const context = { isWin: false, lastFrontApp: '', selectionHelper: { probe: async () => ({
+    trusted: true, bundleIdentifier: 'com.microsoft.Word', text: word.text,
+  }) }, isWordBundleIdentifier: id => id === 'com.microsoft.Word', isOwnBundleIdentifier: () => false,
+  probeWordSelectionContext: async () => word };
+  vm.runInNewContext(`${code}\nthis.probeSelectionContext = probeSelectionContext;`, context);
+  assert.equal(await context.probeSelectionContext(), word);
+});
