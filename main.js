@@ -63,6 +63,7 @@ let pendingRecaptureRequest = false;
 let toolbarTestMode = false;
 let sourceReview = null;
 let sourceReviewData = null;
+let startSourceReviewFromMain = null;
 
 const DEFAULT_SELECTION_CACHE_MAX_AGE_MS = 8000;
 const MANUAL_REFRESH_SELECTION_CACHE_MAX_AGE_MS = 60000;
@@ -667,7 +668,15 @@ function offerWordSourceReview() {
       `${new Date().toISOString()} overlay-offer source=${lastSelectionSnapshot?.source || 'none'} bundle=${lastSelectionEditSession?.bundleIdentifier || 'none'} changes=${state?.changes?.length ?? 'none'} pending=${pendingRecaptureRequest}\n`);
   } catch (logError) { console.error('[runshi] could not write overlay log:', logError); }
   if (pendingRecaptureRequest || !isWordBundleIdentifier(lastSelectionEditSession?.bundleIdentifier)) return;
-  if (state?.changes.length) windowManager.sendToResult('polish:auto-source-review', state.token);
+  if (state?.changes.length && startSourceReviewFromMain) {
+    const token = state.token;
+    const sender = windowManager.resultWindow?.webContents;
+    void startSourceReviewFromMain({ sender }, token).then(result => {
+      if (!result?.ok) windowManager.sendToResult('polish:source-status', {
+        running: false, token, message: result?.error || '原文标注暂不可用，请在结果窗继续批阅。',
+      });
+    }).catch(error => console.error('[runshi] automatic source review failed:', error));
+  }
 }
 
 function prepareReprocessBaseText() {
@@ -1115,7 +1124,7 @@ function registerIPC() {
     }
   });
 
-  ipcMain.handle('source-review:start', async (event, token) => {
+  const startSourceReview = async (event, token) => {
     if (!token || !sourceReviewData || event.sender !== windowManager.resultWindow?.webContents || isProcessing || isApplyingSourceEdit
       || token !== getSourceReviewState()?.token) return { ok: false, error: '当前修订不可开启原文浮窗。' };
     const resultWindow = windowManager.resultWindow;
@@ -1179,7 +1188,9 @@ function registerIPC() {
       windowManager.focusResult();
     }
     return result;
-  });
+  };
+  startSourceReviewFromMain = startSourceReview;
+  ipcMain.handle('source-review:start', startSourceReview);
   ipcMain.handle('source-review:stop', event => {
     if (event.sender !== windowManager.resultWindow?.webContents) return { ok: false };
     sourceReview.stop();

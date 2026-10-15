@@ -399,11 +399,6 @@ window.polishAPI.onResult((result) => {
   updateSourceReviewButton();
 });
 
-window.polishAPI.onAutoSourceReview?.(token => {
-  const button = $('btnSourceReview');
-  if (token === sourceReviewToken && !sourceReviewRunning && !button.disabled) button.click();
-});
-
 function updateSourceReviewButton() {
   const button = $('btnSourceReview');
   button.disabled = !sourceReviewToken || activeVersionIndex !== 0 || sourceStateUncertain

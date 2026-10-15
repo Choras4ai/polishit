@@ -7,7 +7,7 @@ const vm = require('node:vm');
 
 function handlerFixture() {
   const source = fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8');
-  const start = source.indexOf("  ipcMain.handle('source-review:start'");
+  const start = source.indexOf('  const startSourceReview = async');
   const end = source.indexOf("  ipcMain.handle('source-review:stop'", start);
   let handler, foreground = 'Electron', ready = false, hidden = false, allocations = 0, starts = 0;
   const sender = {};
@@ -32,6 +32,28 @@ function handlerFixture() {
   vm.runInNewContext(source.slice(start, end), context);
   return { handler, sender, context, session, word, starts: () => starts, state: () => ({ foreground, ready, hidden, allocations }) };
 }
+
+test('completed Word analysis starts the native overlay without a renderer button round trip', async () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8');
+  const start = source.indexOf('function offerWordSourceReview()');
+  const end = source.indexOf('function prepareReprocessBaseText()', start);
+  let called = 0, sent = [];
+  const sender = {};
+  const context = { isMac: true, pendingRecaptureRequest: false,
+    lastSelectionEditSession: { bundleIdentifier: 'com.microsoft.Word' },
+    lastSelectionSnapshot: { source: 'selection' },
+    getSourceReviewState: () => ({ token: 'current', changes: [{ id: 1 }] }),
+    isWordBundleIdentifier: value => value === 'com.microsoft.Word',
+    startSourceReviewFromMain: async (event, token) => { assert.equal(event.sender, sender); assert.equal(token, 'current'); called++; return { ok: true }; },
+    windowManager: { resultWindow: { webContents: sender }, sendToResult: (...args) => sent.push(args) },
+    fs: { appendFileSync() {} }, app: { getPath: () => '/tmp' }, path,
+    Date, console };
+  vm.runInNewContext(`${source.slice(start, end)}\nthis.offer = offerWordSourceReview;`, context);
+  context.offer();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(called, 1);
+  assert.equal(sent.length, 0);
+});
 
 test('first source review allocates panels before restoring Word, then locates successfully', async () => {
   const fixture = handlerFixture();

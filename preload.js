@@ -28,7 +28,6 @@ contextBridge.exposeInMainWorld('polishAPI', {
   onReviewContext: on('polish:reviewContext'),
   onSourceDecision: on('polish:source-decision'),
   onSourceStatus: on('polish:source-status'),
-  onAutoSourceReview: on('polish:auto-source-review'),
   startSourceReview: token => ipcRenderer.invoke('source-review:start', token),
   stopSourceReview: () => ipcRenderer.invoke('source-review:stop'),
   syncSourceDecision: (token, id, status) => ipcRenderer.invoke('source-review:state', token, id, status),
