@@ -17,6 +17,7 @@ const DEFAULTS = {
     temperature: 0.3,
     task: 'polish',
     genre: 'academic',
+    protectedTerms: [],
     customPrompts: {
       polish: '',
       deai: '',

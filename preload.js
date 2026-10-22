@@ -36,6 +36,7 @@ contextBridge.exposeInMainWorld('polishAPI', {
 
   // Actions
   replaceText: (text) => ipcRenderer.invoke('action:replace', text),
+  validateReviewChange: change => ipcRenderer.invoke('action:validate-review-change', change),
   applyReviewChange: (change, mode) => ipcRenderer.invoke('action:apply-review-change', change, mode),
   finalizeReview: (text) => ipcRenderer.invoke('action:finalize-review', text),
   rollbackLastReplace: () => ipcRenderer.invoke('action:rollback-last-replace'),

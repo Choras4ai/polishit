@@ -215,7 +215,7 @@ test('standard replacement preserves the source on verification failure and copi
   const source = fs.readFileSync(path.resolve(__dirname, '../main.js'), 'utf8');
   const code = source.slice(source.indexOf('async function performStandardReplace('), source.indexOf('async function applyReviewChangeInSource('));
   let copied = ''; let hidden = 0; let writes = 0;
-  const context = { clipboard: { writeText: text => { copied = text; } }, Notification: class { show() {} },
+  const context = { replacementSafetyError: () => null, clipboard: { writeText: text => { copied = text; } }, Notification: class { show() {} },
     windowManager: { hideResult: () => { hidden++; }, focusResult() {}, showUndoToast() {} },
     lastSelectionEditSession: null, lastAppliedReplacement: null, lastOriginalText: '原文',
     applyTextEdit: async request => { writes++; assert.equal(request.expectedText, '原文'); return { ok: false, sourceMayHaveChanged: true, error: 'changed' }; },

@@ -15,7 +15,7 @@ test('LF AX geometry never changes the canonical CR Word write request or docume
       selectionRange: { location: 100, length: originalText.length }, wordParagraphSeparator: 'LF' } };
   const change = { id: 1, type: 'replace', originalStart: 0, originalEnd: 2, oldText: '第一', newText: '较长的第一' };
   let request;
-  const context = { lastSelectionEditSession: session, isReviewChangeApplicable,
+  const context = { authorizeReviewChange: async change => ({ ok: true, change }), lastSelectionEditSession: session, isReviewChangeApplicable,
     isWordBundleIdentifier: value => value === 'com.microsoft.Word', windowManager: { focusResult() {} },
     applyTextEdit: async value => { request = value; return { ok: true, selectionRange: { location: 3 },
       geometryContext: session.geometryContext }; } };

@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, ipcMain, clipboard, shell, systemPreferences, Notification } = require('electron');
+const { app, ipcMain, clipboard, shell, systemPreferences, Notification, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
@@ -27,6 +27,8 @@ const { AgentPipeline } = require('./src/ai/pipeline');
 const { createProvider } = require('./src/ai/provider-factory');
 const { PRESETS, PRESET_ORDER } = require('./src/ai/presets');
 const { normalizeReviewChange, isReviewChangeApplicable, restoreReplacement } = require('./src/review-state');
+const DiffEngine = require('./src/diff');
+const { normalizeProtectedTerms, analyzeReviewSafety, canonicalReviewChange } = require('./src/review-safety');
 
 const isMac = process.platform === 'darwin';
 const ROOT_ENV_PATH = path.join(__dirname, '.env');
@@ -64,6 +66,8 @@ let toolbarTestMode = false;
 let sourceReview = null;
 let sourceReviewData = null;
 let startSourceReviewFromMain = null;
+let lastReviewResults = [], lastReviewOriginalText = '';
+const approvedReviewChanges = new Map();
 
 const DEFAULT_SELECTION_CACHE_MAX_AGE_MS = 8000;
 const MANUAL_REFRESH_SELECTION_CACHE_MAX_AGE_MS = 60000;
@@ -327,6 +331,7 @@ app.on('activate', () => {
 // ── Shared pipeline runner (eliminates duplication across handlers) ──
 async function runPipeline(text, { task, progressPrefix, temperatureOverride, modelOverride } = {}) {
   sourceReview?.stop(); sourceReviewData = null;
+  lastReviewResults = []; lastReviewOriginalText = text; approvedReviewChanges.clear();
   const runToken = ++activeRunToken;
   const isActiveRun = () => runToken === activeRunToken;
   const currentTask = task || config.get('pipeline.task') || 'polish';
@@ -382,6 +387,7 @@ async function runPipeline(text, { task, progressPrefix, temperatureOverride, mo
 
     if (!isActiveRun()) return;
 
+    lastReviewResults.push(result);
     const { explainPromise, ...resultToSend } = result;
     if (lastSelectionEditSession) {
       sourceReviewData = { token: `${runToken}:${lastSelectionEditSession.createdAt}:${lastSelectionEditSession.generation}`,
@@ -393,12 +399,13 @@ async function runPipeline(text, { task, progressPrefix, temperatureOverride, mo
     if (explainPromise) {
       explainPromise.then((explanations) => {
         if (!isActiveRun()) return;
-        if (explanations?.length) {
+        {
           if (sourceReviewData?.session === lastSelectionEditSession) {
             // Pipeline updates its own change objects with the matched reasons.
             for (const change of sourceReviewData.changes) {
               const explained = result.diff.changes.find(c => c.id === change.id);
-              if (explained) Object.assign(change, { reason: explained.reason, errorType: explained.errorType });
+              if (explained) Object.assign(change, { reason: explained.reason, reasonStatus: explained.reasonStatus,
+                errorType: explained.errorType, alternatives: explained.alternatives });
             }
           }
           windowManager.sendToResult('polish:explanations', { explanations, changes: result.diff.changes });
@@ -440,6 +447,7 @@ async function generateAlternativeVersions(text, task, primaryText, runToken) {
       if (runToken !== activeRunToken) return;
       const normalized = String(result?.polishedText || '').trim();
       if (normalized && !seen.has(normalized)) {
+        lastReviewResults.push(result);
         seen.add(normalized);
         delivered += 1;
         windowManager.sendToResult('polish:variant', {
@@ -679,6 +687,61 @@ function offerWordSourceReview() {
   }
 }
 
+function reviewChangeKey(change) {
+  return JSON.stringify([change.type, change.originalStart, change.originalEnd, change.oldText || '', change.newText || '']);
+}
+
+async function authorizeReviewChange(candidate) {
+  const resultsAtStart = lastReviewResults;
+  const canonical = canonicalReviewChange(lastReviewResults.flatMap(r => r.diff?.changes || []), candidate);
+  if (!canonical) return { ok: false, error: '修订数据已变化，请重新分析。' };
+  const change = analyzeReviewSafety(lastReviewOriginalText, [canonical], config.get('pipeline.protectedTerms') || [])[0];
+  const safety = change.reviewSafety;
+  if (safety.blocked) return { ok: false, error: safety.warnings.join('\n') };
+  const key = reviewChangeKey(change);
+  if (safety.requiresConfirmation && !approvedReviewChanges.has(key)) {
+    const { response } = await dialog.showMessageBox({ type: 'warning', title: '核对这条修改',
+      message: '这条建议涉及数值、引文或论断限定，请确认原意。',
+      detail: `${change.oldText || '（插入）'} → ${change.newText || '（删除）'}\n${safety.warnings.join('\n')}`,
+      buttons: ['已核对，仅接受这一条', '保留原文'], defaultId: 1, cancelId: 1 });
+    if (response !== 0) return { ok: false, error: '已保留原文。' };
+    if (resultsAtStart !== lastReviewResults || !canonicalReviewChange(lastReviewResults.flatMap(r => r.diff?.changes || []), candidate)) {
+      return { ok: false, error: '修订会话已变化，请重新分析。' };
+    }
+  }
+  const latestSafety = analyzeReviewSafety(lastReviewOriginalText, [change], config.get('pipeline.protectedTerms') || [])[0].reviewSafety;
+  if (latestSafety.blocked) return { ok: false, error: latestSafety.warnings.join('\n') };
+  approvedReviewChanges.delete(key);
+  approvedReviewChanges.set(key, change);
+  return { ok: true, change };
+}
+
+function replacementSafetyError(text) {
+  const original = lastSelectionEditSession?.currentText ?? lastReviewOriginalText;
+  if (!original || text === original) return null;
+  const risky = analyzeReviewSafety(original, DiffEngine.compute(original, text).changes,
+    config.get('pipeline.protectedTerms') || []).filter(c => c.reviewSafety?.blocked || c.reviewSafety?.requiresConfirmation);
+  if (!risky.length) return null;
+  // A completed draft consisting solely of individually authorized edits is safe to finalize.
+  const approvals = [...approvedReviewChanges.values()].reverse();
+  const authorizedDraft = lastReviewResults.some(r => {
+    let positions = new Set([0]);
+    for (const c of r.diff?.changes || []) {
+      const choices = c.type === 'equal' ? [c.text] : [c.oldText || '',
+        ...approvals.filter(a => canonicalReviewChange([c], a)).map(a => a.newText || '')];
+      const next = new Set();
+      for (const at of positions) for (const part of choices) {
+        if (text.startsWith(part, at)) next.add(at + part.length);
+      }
+      positions = next;
+      if (!positions.size) return false;
+    }
+    return positions.has(text.length);
+  });
+  if (authorizedDraft && !risky.some(c => c.reviewSafety.blocked)) return null;
+  return '当前方案涉及保护词或尚未逐条确认的数值、引文、论断变化。请逐条批阅，或保留原文。';
+}
+
 function prepareReprocessBaseText() {
   const session = lastSelectionEditSession;
   if (!session) return lastOriginalText;
@@ -780,6 +843,8 @@ async function withSourceEdit(action) {
 
 async function performStandardReplace(text) {
   if (typeof text !== 'string') return { ok: false, error: '替换文本无效。' };
+  const safetyError = replacementSafetyError(text);
+  if (safetyError) return { ok: false, error: safetyError };
   const editSession = lastSelectionEditSession;
   if (!editSession) {
     clipboard.writeText(text);
@@ -840,6 +905,11 @@ async function applyReviewChangeInSource(change, mode = 'accept', options = {}) 
     return { ok: false, error: '修订与原始选区不匹配，请重新分析。' };
   }
   const isRevert = mode === 'revert';
+  if (!isRevert) {
+    const authorized = await authorizeReviewChange(change);
+    if (!authorized.ok) return authorized;
+    change = authorized.change;
+  }
   if (isRevert && session.appliedChanges.has(change.id)) change = session.appliedChanges.get(change.id);
   const alreadyApplied = session.appliedChanges.has(change.id);
 
@@ -900,6 +970,9 @@ async function applyReviewChangeInSource(change, mode = 'accept', options = {}) 
 }
 
 async function finalizeSurgicalReview(finalText) {
+  if (typeof finalText !== 'string') return { ok: false, error: '替换文本无效。' };
+  const safetyError = replacementSafetyError(finalText);
+  if (safetyError) return { ok: false, error: safetyError };
   const session = lastSelectionEditSession;
   if (!session) {
     return performStandardReplace(finalText);
@@ -1105,7 +1178,10 @@ function registerIPC() {
     all.appVersion = app.getVersion();
     return all;
   });
-  ipcMain.handle('config:set', (_e, key, value) => config.set(key, value));
+  ipcMain.handle('config:set', (_e, key, value) => config.set(key,
+    key === 'pipeline.protectedTerms' ? normalizeProtectedTerms(value) : value));
+  ipcMain.handle('action:validate-review-change', (event, change) => event.sender === windowManager.resultWindow?.webContents
+    ? authorizeReviewChange(change) : { ok: false, error: '无效修订请求。' });
 
   ipcMain.handle('action:replace', async (_e, text) => {
     return withSourceEdit(() => performStandardReplace(text));
@@ -1240,7 +1316,17 @@ function registerIPC() {
     windowManager.hideUndoToast();
   });
 
-  ipcMain.handle('action:copy', (_e, text) => clipboard.writeText(text));
+  ipcMain.handle('action:copy', async (_e, text) => {
+    if (typeof text !== 'string') return { ok: false, error: '复制文本无效。' };
+    const safetyError = replacementSafetyError(text);
+    if (safetyError) {
+      const { response } = await dialog.showMessageBox({ type: 'warning', title: '复制前核对',
+        message: '完整方案含未经确认的风险修改。复制后请勿直接覆盖原文。', detail: safetyError,
+        buttons: ['仍要复制供人工核对', '取消'], defaultId: 1, cancelId: 1 });
+      if (response !== 0) return { ok: false, error: '已取消复制。' };
+    }
+    clipboard.writeText(text); return { ok: true };
+  });
 
   ipcMain.handle('window:open-settings', () => windowManager.showSettings());
   ipcMain.handle('window:open-home', () => windowManager.showHome());

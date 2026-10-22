@@ -399,11 +399,16 @@
       </div>
     </div>
     <div class="form-group">
+      <label class="form-label" for="protectedTerms">保护词</label>
+      <textarea id="protectedTerms" rows="4" placeholder="每行一个，例如 Cox、BRCA1、润石" aria-describedby="protectedTermsHint"></textarea>
+      <p class="form-hint" id="protectedTermsHint">每行一个，最多 200 个，每个不超过 120 字符。涉及保护词的修改不能直接接受；数值、引文与论断变化另行提示核对。保存后重新分析可更新界面标记；修订理由会分批调用模型，可能增加费用。</p>
+    </div>
+    <div class="form-group">
       <label class="form-label">润色方案</label>
       <div class="toggle-row featured-toggle">
         <div class="toggle-copy">
           <div class="toggle-title">提供多个润色版本 <span class="default-pill">默认开启</span></div>
-          <p class="form-hint">先显示主方案，另外两个方案在后台生成，可直接切换比较。开启后一次润色最多消耗约 3 次调用积分。</p>
+          <p class="form-hint">先显示主方案，另外两个方案在后台生成，可直接切换比较。开启后最多生成 3 个方案；修订理由另行分批请求，费用取决于模型和文本长度。</p>
         </div>
         <label class="switch" for="multipleVersionsEnabled">
           <input type="checkbox" id="multipleVersionsEnabled" checked>

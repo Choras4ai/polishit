@@ -250,6 +250,8 @@ function showView(name) {
 
 /* ────────── Events ────────── */
 window.polishAPI.onOriginalText((text) => {
+  $('sourceReviewStatus').textContent = '';
+  $('sourceReviewStatus').classList.add('hidden');
   originalText = text;
   sourceReviewToken = null; sourceReviewRunning = false;
   updateSourceReviewButton();
@@ -412,6 +414,8 @@ $('btnSourceReview').addEventListener('click', async () => {
     else {
       const result = await window.polishAPI.startSourceReview(sourceReviewToken);
       sourceReviewRunning = !!result?.ok;
+      $('sourceReviewStatus').textContent = result?.ok ? '' : (result?.error || '原文定位暂不可用，请在本窗口批阅。');
+      $('sourceReviewStatus').classList.toggle('hidden', !!result?.ok);
       if (!result?.ok) flashActionMessage(result?.error || '当前编辑器无法提供精确原文位置，请在结果窗继续批阅。', 6000);
     }
   } finally { updateSourceReviewButton(); }
@@ -419,6 +423,10 @@ $('btnSourceReview').addEventListener('click', async () => {
 window.polishAPI.onSourceStatus?.(event => {
   if (event.token !== sourceReviewToken) return;
   sourceReviewRunning = event.running; updateSourceReviewButton();
+  if (event.message) {
+    $('sourceReviewStatus').textContent = event.message;
+    $('sourceReviewStatus').classList.toggle('hidden', !!event.running && event.message.startsWith('原文浮窗已开启'));
+  }
   if (event.message) flashActionMessage(event.message, 5000);
   else if (!event.running) flashActionMessage('原文浮窗已停止，可在结果窗继续批阅。');
 });
@@ -451,7 +459,7 @@ window.polishAPI.onVariantProgress?.((progress) => {
 
 // Async explanations update — received after initial result
 window.polishAPI.onExplanations?.(({ explanations, changes }) => {
-  if (!explanations?.length || !Array.isArray(changes)) return;
+  if (!Array.isArray(changes)) return;
   // Main has already matched each explanation to a specific diff id. Reusing
   // those matches keeps repeated phrases distinct and preserves review state.
   const targetChanges = activeVersionIndex === 0 ? diffChanges : (versionResults[0]?.diff?.changes || []);
@@ -461,6 +469,7 @@ window.polishAPI.onExplanations?.(({ explanations, changes }) => {
     const match = matchedChanges.get(change.id);
     if (match && match.type === change.type && match.oldText === change.oldText && match.newText === change.newText) {
       change.reason = match.reason;
+      change.reasonStatus = match.reasonStatus;
       change.errorType = match.errorType;
       change.alternatives = match.alternatives || [];
     }
@@ -621,7 +630,7 @@ function showPopup(marker, change) {
     $('popupAccept').textContent = change.status === 'accepted' ? '撤销这条修改' : '恢复待批阅';
     $('popupDismiss').classList.add('hidden');
   } else {
-    popupReason.textContent = change.reason || '';
+    popupReason.textContent = [change.reason || (change.reasonStatus === 'pending' ? '理由正在生成…' : '理由暂未生成，请结合上下文判断。'), ...(change.reviewSafety?.warnings || [])].join('\n');
     $('popupAccept').textContent = '应用到原文';
     $('popupDismiss').textContent = '忽略';
     $('popupDismiss').classList.remove('hidden');
@@ -716,6 +725,7 @@ function flashActionMessage(message, timeout = 2800) {
 }
 
 async function acceptChange(change) {
+  if (change.reviewSafety?.blocked) { flashActionMessage(change.reviewSafety.warnings.join(' '), 8000); return false; }
   if (sourceStateUncertain) {
     flashActionMessage('无法确认上一条修改是否已写入。请先检查原文并重新选择文字分析。', 6000);
     return false;
@@ -737,6 +747,8 @@ async function acceptChange(change) {
       return false;
     }
   } else {
+    const authorization = await window.polishAPI.validateReviewChange(change);
+    if (!authorization?.ok) { flashActionMessage(authorization?.error || '修订未通过核验，请重新分析。', 8000); return false; }
     change.appliedInSource = false;
   }
   change.status = 'accepted';
@@ -806,9 +818,10 @@ $('btnAcceptAll').addEventListener('click', async () => {
   hidePopup();
   const button = $('btnAcceptAll');
   if (button.disabled) return;
-  const reviewable = diffChanges.filter(c => c.type !== 'equal' && c.status === 'pending');
+  const reviewable = diffChanges.filter(c => c.type !== 'equal' && c.status === 'pending'
+    && !c.reviewSafety?.blocked && !c.reviewSafety?.requiresConfirmation);
   if (!reviewable.length) {
-    flashActionMessage('没有待接受的建议。');
+    flashActionMessage('没有可批量接受的建议；风险建议请逐条核对，保护词修改不能直接接受。', 8000);
     return;
   }
   button.disabled = true;
@@ -818,8 +831,8 @@ $('btnAcceptAll').addEventListener('click', async () => {
       if (!await acceptChange(change)) return;
     }
     flashActionMessage(reviewContext.surgicalEditing
-      ? `已在原文应用 ${reviewable.length} 处修改，可逐条撤销。`
-      : `已选择 ${reviewable.length} 处修改，请复制已选修改稿。`, 6000);
+      ? `已在原文应用 ${reviewable.length} 处修改；风险建议保留供逐条核对。`
+      : `已选择 ${reviewable.length} 处修改；风险建议保留供逐条核对。`, 6000);
   } catch (error) {
     flashActionMessage(`未能完成接受全部：${error.message || '请重试'}`, 8000);
   } finally {
@@ -954,8 +967,9 @@ $('btnUsePolished').addEventListener('click', async () => {
   await applyReplacementText(polishedText);
 });
 
-$('btnCopyPolished').addEventListener('click', () => {
-  window.polishAPI.copyText(polishedText);
+$('btnCopyPolished').addEventListener('click', async () => {
+  const result = await window.polishAPI.copyText(polishedText);
+  if (!result?.ok) { flashActionMessage(result?.error || '已取消复制。'); return; }
   const btn = $('btnCopyPolished');
   btn.textContent = '已复制 ✓';
   setTimeout(() => { btn.textContent = '复制'; }, 1500);

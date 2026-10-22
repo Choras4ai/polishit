@@ -832,6 +832,7 @@ async function loadConfig() {
   $('#tempValue').textContent = temp.toFixed(1);
   $('#customPromptPolish').value = config.pipeline?.customPrompts?.polish || '';
   $('#customPromptDeai').value = config.pipeline?.customPrompts?.deai || '';
+  $('#protectedTerms').value = (config.pipeline?.protectedTerms || []).join('\n');
   const requestSource = commercialStatus?.preferredSource || config.commercial?.preferredSource || 'hosted';
   $('#sourceToggle').checked = requestSource === 'direct';
 
@@ -1171,6 +1172,9 @@ $('#btnSaveGeneral').addEventListener('click', async () => {
   const mode = $('input[name="pipelineMode"]:checked').value;
   const temp = parseInt($('#temperature').value, 10) / 10;
 
+  try {
+    await window.polishAPI.setConfig('pipeline.protectedTerms', $('#protectedTerms').value);
+  } catch (error) { showStatus(status, error.message || '保护词格式无效', 'error'); return; }
   await window.polishAPI.setConfig('pipeline.task', task);
   await window.polishAPI.setConfig('pipeline.genre', genre);
   await window.polishAPI.setConfig('pipeline.mode', mode);

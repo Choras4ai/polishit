@@ -12,7 +12,8 @@ function normalizeReviewChange(change) {
 }
 
 function isReviewChangeApplicable(session, change) {
-  if (!normalizeReviewChange(change) || change.originalEnd > session.originalText.length
+  change = normalizeReviewChange(change);
+  if (!change || change.originalEnd > session.originalText.length
     || change.originalStart > session.originalText.length
     || session.originalText.slice(change.originalStart, change.originalEnd) !== change.oldText) return false;
   for (const other of session.appliedChanges.values()) {

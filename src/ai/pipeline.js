@@ -1,6 +1,7 @@
 'use strict';
 
 const DiffEngine = require('../diff');
+const { analyzeReviewSafety } = require('../review-safety');
 const { EXPLAIN_BILLING_RATIO } = require('../commercial/credit-policy');
 
 function normalizeModelOutputText(text) {
@@ -196,44 +197,11 @@ NEVER: large-scale rewriting; change meaning/facts/structure; add content; outpu
 Output text directly.`,
 };
 
-// ── Explain Prompts (concise) ──
-const ZH_EXPLAIN_PROMPT = `对比原文和修改后文本，找出关键修改并给出简要理由。
-
-原文：{original}
-
-修改后：{polished}
-
-返回纯JSON数组（无代码块）：
-[{{"original":"原文片段","modified":"修改后片段","alternatives":[],"reason":"简要理由","type":"类别"}}]
-
-- original/modified: 5-15字定位上下文
-- alternatives: 有明显更优方案时给1-2个，否则[]
-- type: grammar / punctuation / wording / style / logic / detemplate
-- 长文本(≥500字)跳过纯标点修改
-
-无修改返回[]。不虚构理由。`;
-
-const EN_EXPLAIN_PROMPT = `Compare original and revised text. Identify KEY modifications with concise reasons.
-
-Original: {original}
-
-Revised: {polished}
-
-Return as plain JSON array (NO code blocks):
-[{{"original":"original snippet","modified":"modified snippet","alternatives":[],"reason":"concise reason","type":"category"}}]
-
-- original/modified: 5-15 chars/words of context
-- alternatives: 1-2 only if clearly superior, else []
-- type: grammar / punctuation / wording / style / logic / detemplate
-- Long text (≥500 chars): skip trivial punctuation changes
-
-If no changes, return []. Do NOT fabricate reasons.`;
-
 class AgentPipeline {
   constructor(provider, config, { temperature } = {}) {
     this.provider = provider;
     const keys = ['pipeline.genre', 'pipeline.task', 'pipeline.mode', 'pipeline.temperature',
-      'pipeline.customPrompts.polish', 'pipeline.customPrompts.deai'];
+      'pipeline.customPrompts.polish', 'pipeline.customPrompts.deai', 'pipeline.protectedTerms'];
     const values = Object.fromEntries(keys.map(key => [key, config.get(key)]));
     if (temperature != null) values['pipeline.temperature'] = temperature;
     this.config = { get: key => values[key] };
@@ -260,6 +228,8 @@ class AgentPipeline {
 
   _withCustomPrompt(basePrompt, task) {
     let prompt = this._injectGenre(basePrompt, task);
+    const terms = this.config.get('pipeline.protectedTerms') || [];
+    if (terms.length) prompt += `\nDo not alter these user-protected terms: ${JSON.stringify(terms)}`;
     const customPrompt = this._getCustomPrompt(task);
     if (!customPrompt) return prompt;
     return `${prompt}
@@ -346,6 +316,8 @@ ${customPrompt}`;
     // Compute diff and generate explanations in parallel
     onProgress({ stage: '正在分析修改...', percent: 70 });
     const diff = DiffEngine.compute(text, polishedText);
+    diff.changes = analyzeReviewSafety(text, diff.changes, this.config.get('pipeline.protectedTerms') || []);
+    for (const c of diff.changes) if (c.type !== 'equal') c.reasonStatus = options.skipExplanations ? 'unavailable' : 'pending';
 
     if (!diff.hasChanges) {
       onProgress({ stage: '完成', percent: 100 });
@@ -355,21 +327,17 @@ ${customPrompt}`;
     // Return result immediately; explanations will be fetched async
     onProgress({ stage: '完成', percent: 95 });
 
-    // Skip AI explain for tiny texts (< 30 chars) — diff highlighting alone is clear enough
-    // Skip explain if too many changes (>20) — meaningful explain is impractical
-    const changeCount = diff.changes.filter(c => c.type !== 'equal').length;
-    if (options.skipExplanations || text.length < 30 || changeCount > 20) {
-      return { polishedText, diff, explanations: [], task };
-    }
+    if (options.skipExplanations) return { polishedText, diff, explanations: [], task };
 
     // Attach a lazy explain function for the caller to use asynchronously
     const self = this;
     const explainPromise = (async () => {
       try {
-        const explanations = await self._explain(text, polishedText, lang);
+        const explanations = await self._explain(text, polishedText, lang, diff.changes);
         self._mapExplanations(diff.changes, explanations);
         return explanations;
       } catch (_) {
+        for (const c of diff.changes) if (c.type !== 'equal') c.reasonStatus = 'unavailable';
         return [];
       }
     })();
@@ -385,11 +353,6 @@ ${customPrompt}`;
     return lang === 'en' ? EN_DEAI_PROMPTS : ZH_DEAI_PROMPTS;
   }
 
-  _getExplainPrompt(lang) {
-    return lang === 'en' ? EN_EXPLAIN_PROMPT : ZH_EXPLAIN_PROMPT;
-  }
-
-  // Estimate max_tokens needed based on input length (1.3x buffer + 200 baseline)
   _estimateMaxTokens(text) {
     // For Chinese: ~1 char = ~1.5 tokens. For English: ~1 word = ~1.3 tokens, ~4 chars = ~1 token.
     // Use generous estimate: char count × 1.3 + 200 buffer, capped at 8192 (supported by
@@ -501,57 +464,50 @@ ${customPrompt}`;
     return firstPass.trim();
   }
 
-  async _explain(original, polished, lang) {
-    const prompt = this._getExplainPrompt(lang)
-      .replace('{original}', original)
-      .replace('{polished}', polished);
-
-    // Explain output is small JSON — cap at 1500 tokens max
-    const response = await this.provider.chat(
-      [
-        { role: 'system', content: 'You are an editorial reviewer. Output strict JSON, no code blocks.' },
-        { role: 'user', content: prompt },
-      ],
-      {
-        temperature: 0.1,
-        maxTokens: 1500,
-        ...this._buildBillingOptions(
-          original.length >= polished.length ? original : polished,
-          'polish',
-          'explain',
-        ),
-      },
-    );
-
-    const cleaned = response.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
-    return JSON.parse(cleaned);
+  async _explain(original, polished, lang, changes = []) {
+    const edits = changes.filter(c => c.type !== 'equal');
+    const explanations = [];
+    for (let offset = 0; offset < edits.length; offset += 8) {
+      const batch = edits.slice(offset, offset + 8).map(c => ({ id: c.id,
+        original: c.oldText || '', modified: c.newText || '',
+        context: original.slice(Math.max(0, c.originalStart - 40), c.originalStart + (c.oldText || '').length + 40) }));
+      const input = JSON.stringify(batch);
+      try {
+        const response = await this.provider.chat([
+          { role: 'system', content: `You are an editorial reviewer. Output strict JSON, no code blocks.
+Explain ONLY the supplied edits in ${lang === 'zh' ? 'Chinese' : 'English'}.
+Return an array of {id,original,modified,reason,type,alternatives}.
+Copy id/original/modified EXACTLY. Give a specific contextual reason, do not invent facts.
+type: grammar/punctuation/wording/style/logic/detemplate; alternatives: at most 2 strings or [].` },
+          { role: 'user', content: input },
+        ], { temperature: 0.1, maxTokens: 2400, ...this._buildBillingOptions(input, 'polish', 'explain') });
+        const parsed = JSON.parse(response.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, ''));
+        if (Array.isArray(parsed)) explanations.push(...parsed);
+      } catch (_) { /* A failed batch must not attach an invented reason. */ }
+    }
+    return explanations;
   }
 
   _mapExplanations(changes, explanations) {
-    if (!explanations || explanations.length === 0) return;
-
-    const remaining = [...explanations];
+    const entries = Array.isArray(explanations) ? explanations : [];
+    const types = new Set(['grammar', 'punctuation', 'wording', 'style', 'logic', 'detemplate']);
     for (const change of changes) {
       if (change.type === 'equal') continue;
-      const oldText = change.oldText || '';
-      const newText = change.newText || '';
-
-      const idx = remaining.findIndex(exp => {
-        const expOriginal = typeof exp.original === 'string' ? exp.original : '';
-        const expModified = typeof exp.modified === 'string' ? exp.modified : '';
-        const origMatch = Boolean(expOriginal) && (oldText.includes(expOriginal) || expOriginal.includes(oldText));
-        const modMatch = Boolean(expModified) && (newText.includes(expModified) || expModified.includes(newText));
-        return origMatch || modMatch;
-      });
-
-      if (idx !== -1) {
-        change.reason = remaining[idx].reason;
-        change.errorType = remaining[idx].type;
-        change.alternatives = remaining[idx].alternatives || [];
-        remaining.splice(idx, 1);
+      const matches = entries.filter(e => e && Number.isSafeInteger(e.id) && e.id === change.id);
+      const exp = matches.length === 1 ? matches[0] : null;
+      if (!exp || exp.original !== (change.oldText || '') || exp.modified !== (change.newText || '')
+        || typeof exp.reason !== 'string' || !exp.reason.trim() || exp.reason.length > 1000 || !types.has(exp.type)) {
+        change.reasonStatus = 'unavailable';
+        continue;
       }
+      change.reason = exp.reason.trim();
+      change.reasonStatus = 'ready';
+      change.errorType = exp.type;
+      change.alternatives = change.type !== 'delete' && Array.isArray(exp.alternatives)
+        ? exp.alternatives.filter(a => typeof a === 'string' && a.trim() && a.length <= 2000).slice(0, 2) : [];
     }
   }
+
 }
 
 module.exports = { AgentPipeline, detectLanguage, normalizeModelOutputText };

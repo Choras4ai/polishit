@@ -14,7 +14,8 @@ test('stopping native review replaces the stale enabled message and ignores old 
   const handler = script.slice(script.indexOf('window.polishAPI.onSourceStatus?.'), script.indexOf('window.polishAPI.onSourceDecision?.'));
   let receive;
   const messages = [];
-  const context = { window: { polishAPI: { onSourceStatus: cb => { receive = cb; } } },
+  const sourceStatus = { textContent: '', classList: { toggle() {} } };
+  const context = { $: () => sourceStatus, window: { polishAPI: { onSourceStatus: cb => { receive = cb; } } },
     sourceReviewToken: 'current', sourceReviewRunning: true,
     updateSourceReviewButton() {}, flashActionMessage: message => messages.push(message) };
   vm.runInNewContext(handler, context);

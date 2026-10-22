@@ -17,9 +17,10 @@ window.sourceReview.onRender(payload => {
   $('category').textContent = labels[payload.change.errorType] || '修订建议';
   $('old').textContent = payload.change.oldText || '在此处插入';
   $('accept').textContent = (payload.change.newText || '删除此处') + ' ↵';
-  $('reason').textContent = payload.change.reason || '建议调整此处表达。请结合上下文确认，点击上方仅替换这一处原文。';
+  $('reason').textContent = [payload.change.reason || (payload.change.reasonStatus === 'pending' ? '理由正在生成…' : '理由暂未生成，请结合上下文判断。'), ...(payload.change.reviewSafety?.warnings || [])].join('\n');
   $('status').textContent = '';
   document.querySelectorAll('button').forEach(b => b.disabled = false);
+  $('accept').disabled = !!current?.change.reviewSafety?.blocked;
 });
 for (const action of ['accept', 'ignore', 'results', 'close']) $(action).addEventListener('click', async () => {
   if (!current || busy) return;
@@ -28,5 +29,6 @@ for (const action of ['accept', 'ignore', 'results', 'close']) $(action).addEven
     const result = await window.sourceReview.act({ token: current.token, id: current.change.id, action });
     if (!result?.ok) $('status').textContent = result?.error || '未能执行，请返回结果窗检查。';
   } catch (_) { $('status').textContent = '连接中断，请返回结果窗检查。'; }
-  finally { busy = false; document.querySelectorAll('button').forEach(b => b.disabled = false); }
+  finally { busy = false; document.querySelectorAll('button').forEach(b => b.disabled = false);
+  $('accept').disabled = !!current?.change.reviewSafety?.blocked; }
 });

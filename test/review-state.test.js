@@ -35,3 +35,8 @@ test('review changes reject out-of-bounds insertion and overlapping accepted edi
   assert.equal(isReviewChangeApplicable(session, { id: 3, type: 'replace', originalStart: 3, originalEnd: 5, oldText: 'de', newText: 'x' }), false);
   assert.equal(isReviewChangeApplicable(session, { ...insertion, originalStart: 2, originalEnd: 2 }), false);
 });
+test('native overlay insertions use normalized empty source text', () => {
+  const { isReviewChangeApplicable } = require('../src/review-state');
+  assert.equal(isReviewChangeApplicable({ originalText: 'ab', appliedChanges: new Map() },
+    { id: 1, type: 'insert', originalStart: 1, originalEnd: 1, newText: 'x' }), true);
+});
