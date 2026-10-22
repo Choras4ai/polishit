@@ -23,3 +23,17 @@
 
 ## 范围
 本版没有引入逐字实时分析、跨文档自动学习偏好或新聊天子系统；这些属于调研方案的后续阶段。
+
+## 本地包核验与实机记录
+- macOS arm64 应用已构建，`codesign --verify --deep --strict` 通过；CUA 启动后“关于”显示 v1.7.0，“通用”显示保护词输入、辅助功能授权有效、主进程监听正常。
+- macOS 与 Windows x64 的 app.asar 均确认版本 1.7.0，主进程、preload、安全校验、共用修订状态和 AI 流水线逐文件 SHA-256 与仓库一致。
+- SQLite 模块已检查文件架构：macOS 为 Mach-O arm64，Windows 为 PE x86-64。此检查不代表数据库运行验收。
+- Word 实测文档使用合成错字文本。CUA 选中并复制后，设置仍显示“尚未捕获到外部应用中的文本”，没有新 overlay 日志；未能进入实际 AI→原文下划线→悬停→写回链路。不能据此判定原文批阅已修复或验收通过。
+- “显示测试浮窗”入口返回已显示提示，但不能替代真实选区监听与 Word 写回验收。临时文档已保存至 `/tmp/runshi-1.7.0-word-check.docx` 并关闭，未修改用户文档。
+
+## 安装包
+- Mac arm64：构建退出码 0，`hdiutil verify` 校验通过；`润石 PoliShit-1.7.0-arm64.dmg` 保存于本机 `~/Downloads/Runshi-1.7.0/`。
+  SHA-256：`ef907a898426be0ced9eec3d8551d5c57bf077be4e8dc46a338c35b58e3f5004`。
+- Windows x64：NSIS 安装器已生成，7-Zip 完整性检查返回 `Everything is Ok`；`润石 PoliShit Setup 1.7.0.exe` 保存于相同目录。未在 Windows 执行安装或 Word 测试。
+  SHA-256：`0c78ef23761ab833e977f9bd28d75efd6d5b59e06188939f9d703b8aea9f62dd`。
+- 本地测试版已启动；未上传公开稳定版安装器，未切换自动更新。
