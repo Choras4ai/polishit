@@ -33,14 +33,14 @@ function handlerFixture() {
   return { handler, sender, context, session, word, starts: () => starts, state: () => ({ foreground, ready, hidden, allocations }) };
 }
 
-test('completed Word analysis starts the native overlay without a renderer button round trip', async () => {
+for (const platform of ['darwin', 'win32']) test(`${platform} completed Word analysis starts the native overlay without a renderer button round trip`, async () => {
   const source = fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8');
   const start = source.indexOf('function offerWordSourceReview()');
   const end = source.indexOf('function prepareReprocessBaseText()', start);
   let called = 0, sent = [];
   const sender = {};
-  const context = { isMac: true, pendingRecaptureRequest: false,
-    lastSelectionEditSession: { bundleIdentifier: 'com.microsoft.Word' },
+  const context = { isMac: platform === 'darwin', process: { platform }, pendingRecaptureRequest: false,
+    lastSelectionEditSession: { bundleIdentifier: platform === 'darwin' ? 'com.microsoft.Word' : 'win32.word' },
     lastSelectionSnapshot: { source: 'selection' },
     getSourceReviewState: () => ({ token: 'current', changes: [{ id: 1 }] }),
     isWordBundleIdentifier: value => value === 'com.microsoft.Word',
@@ -53,6 +53,15 @@ test('completed Word analysis starts the native overlay without a renderer butto
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(called, 1);
   assert.equal(sent.length, 0);
+  context.pendingRecaptureRequest = true;
+  context.offer();
+  context.pendingRecaptureRequest = false;
+  context.lastSelectionEditSession.bundleIdentifier = 'unrelated.editor';
+  context.offer();
+  context.lastSelectionEditSession = null;
+  context.offer();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(called, 1, 'recapture and unsupported sources must not start the overlay');
 });
 
 test('first source review allocates panels before restoring Word, then locates successfully', async () => {

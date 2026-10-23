@@ -63,6 +63,7 @@ class SourceReview {
         !['geometry-timeout', 'source-element-unavailable', 'source-not-visible', 'host-bounds-unavailable'].includes(result?.reason)) break;
       await new Promise(resolve => setTimeout(resolve, 120));
     }
+    if (this.epoch !== epoch) return { ok: false, error: '原文浮窗已取消。' };
     if (!result?.ok) { this.stop(); return result || { ok: false, error: '当前编辑器无法提供原文位置。' }; }
     this.geometryTimer = setInterval(() => this.refresh(), 600);
     this.pointerTimer = setInterval(() => this.pointer(), 70);
@@ -95,10 +96,10 @@ class SourceReview {
   }
 
   async refresh() {
-    if (!this.running || this.pending || this.busy || this.writing) return;
+    if (!this.running || this.pending === this.epoch || this.busy || this.writing) return;
     const state = this.getState(), epoch = this.epoch;
     if (!state || state.token !== this.token || state.uncertain) { this.stop(); return { ok: false, error: '原文会话已变化，请重新分析。' }; }
-    this.pending = true;
+    this.pending = epoch;
     try {
       const ids = new Set(state.changes.map(c => c.id));
       const pages = Math.max(1, Math.ceil(state.changes.length / 32));
@@ -150,7 +151,7 @@ class SourceReview {
     } catch (error) {
       if (this.epoch === epoch) this.hide();
       return { ok: false, error: error.message || '原文定位失败。' };
-    } finally { this.pending = false; }
+    } finally { if (this.pending === epoch) this.pending = null; }
   }
 
   showCard(rect, state) {

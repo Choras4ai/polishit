@@ -176,3 +176,22 @@ test('geometry and suggestion content changes redraw only the affected window', 
     assert.equal(review.card.payload.change.newText, '更新');
   } finally { review.destroy(); }
 });
+
+test('restarting while old geometry is pending allows new geometry and ignores old completion', async () => {
+  const resolvers = [];
+  const { review } = fixture(() => new Promise(resolve => resolvers.push(resolve)));
+  const rects = [{ id: 1, x: 30, y: 40, width: 30, height: 20 }];
+  try {
+    const first = review.start('generation-1');
+    await new Promise(setImmediate);
+    const second = review.start('generation-1');
+    await new Promise(setImmediate);
+    assert.equal(resolvers.length, 2);
+    resolvers[0]({ ok: true, rects });
+    await first;
+    assert.equal(review.running, true);
+    resolvers[1]({ ok: true, rects });
+    assert.equal((await second).ok, true);
+    assert.equal(review.overlay.isVisible(), true);
+  } finally { review.destroy(); for (const resolve of resolvers) resolve({ ok: false }); }
+});

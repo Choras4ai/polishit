@@ -669,13 +669,16 @@ function getSourceReviewState(includeGeometry = true, page = 0) {
 }
 
 function offerWordSourceReview() {
-  if (!isMac) return;
+  const bundle = lastSelectionEditSession?.bundleIdentifier;
+  const supportedWord = (isMac && isWordBundleIdentifier(bundle))
+    || (process.platform === 'win32' && bundle === 'win32.word');
+  if (!supportedWord) return;
   const state = getSourceReviewState();
   try {
     fs.appendFileSync(path.join(app.getPath('userData'), 'polish-errors.log'),
       `${new Date().toISOString()} overlay-offer source=${lastSelectionSnapshot?.source || 'none'} bundle=${lastSelectionEditSession?.bundleIdentifier || 'none'} changes=${state?.changes?.length ?? 'none'} pending=${pendingRecaptureRequest}\n`);
   } catch (logError) { console.error('[runshi] could not write overlay log:', logError); }
-  if (pendingRecaptureRequest || !isWordBundleIdentifier(lastSelectionEditSession?.bundleIdentifier)) return;
+  if (pendingRecaptureRequest) return;
   if (state?.changes.length && startSourceReviewFromMain) {
     const token = state.token;
     const sender = windowManager.resultWindow?.webContents;

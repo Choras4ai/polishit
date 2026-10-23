@@ -11,6 +11,14 @@ exports.default = async function (context) {
   const resources = context.electronPlatformName === 'darwin'
     ? path.join(context.appOutDir, `${context.packager.appInfo.productFilename}.app`, 'Contents', 'Resources')
     : path.join(context.appOutDir, 'resources');
+  const { extractFile } = require('@electron/asar');
+  const project = context.packager.projectDir;
+  const sources = ['main.js', 'preload.js', ...fs.readdirSync(path.join(project, 'src'), { recursive: true }).filter(file => file.endsWith('.js')).map(file => path.join('src', file))];
+  for (const file of sources) {
+    if (!extractFile(path.join(resources, 'app.asar'), file).equals(fs.readFileSync(path.join(project, file)))) {
+      throw new Error(`Packaged source differs from project: ${file}`);
+    }
+  }
   for (const relative of ['ai/presets.js', 'commercial/model-timeouts.js', 'commercial/credit-policy.js', 'commercial/profit-policy.js']) {
     const destination = path.join(resources, 'src', relative);
     fs.mkdirSync(path.dirname(destination), { recursive: true });

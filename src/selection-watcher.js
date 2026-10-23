@@ -153,11 +153,13 @@ class SelectionWatcher {
       return;
     }
 
-    if (this._pending) return;
-    this._pending = true;
+    if (this._pending && this._pending.epoch === this._winPollEpoch) return;
+    const pending = this._pending = { epoch: this._winPollEpoch };
 
+    const epoch = this._winPollEpoch;
     if (this._selectionHelper?.run((err, payload) => {
-      this._pending = false;
+      if (this._pending === pending) if (this._pending === pending) this._pending = false;
+      if (!this._isCurrentProbe(epoch)) return;
       this._lastProbeAt = Date.now();
 
       if (err || !payload) {
@@ -283,10 +285,16 @@ public class RunshiSelectionNative {
     });
   }
 
+  _isCurrentProbe(epoch) {
+    return epoch === this._winPollEpoch && !this._paused && this._enabled;
+  }
+
   _checkWithAppleScriptFallback() {
-    this._pending = true;
+    const epoch = this._winPollEpoch;
+    const pending = this._pending = { epoch };
     execFile('osascript', this._checkArgs, { timeout: 2000 }, (err, stdout) => {
       this._pending = false;
+      if (!this._isCurrentProbe(epoch)) return;
 
       if (err) {
         this._maybeClear('selection');
@@ -344,8 +352,10 @@ public class RunshiSelectionNative {
   _probeWordSelection(payload) {
     if (this._wordProbePending) return;
     this._wordProbePending = true;
+    const epoch = this._winPollEpoch;
     probeWordSelectionContext()
       .then((context) => {
+        if (!this._isCurrentProbe(epoch)) return;
         const rawText = typeof context?.text === 'string' ? context.text : '';
         const text = this._normalizeText(rawText);
         if (!this._isTriggerableText(text)) {
@@ -362,6 +372,7 @@ public class RunshiSelectionNative {
         });
       })
       .catch((err) => {
+        if (!this._isCurrentProbe(epoch)) return;
         this._lastProbeError = err?.message || 'Word 选区读取失败';
         this._maybeClear('selection');
       })
@@ -373,6 +384,7 @@ public class RunshiSelectionNative {
   _probeWpsSelection(payload) {
     if (this._wpsProbePending || BrowserWindow.getFocusedWindow()) return;
     this._wpsProbePending = true;
+    const epoch = this._winPollEpoch;
     const clipboardSnapshot = this._snapshotClipboard();
     const sentinel = `__RUNSHI_WPS_SELECTION_${Date.now()}__`;
     clipboard.writeText(sentinel);
@@ -384,6 +396,12 @@ public class RunshiSelectionNative {
           try {
             const rawText = clipboard.readText();
             const capturedChangeCount = this._clipboardChangeCount();
+            if (!this._isCurrentProbe(epoch)) {
+              if (rawText === sentinel || (sentinelChangeCount != null && capturedChangeCount === sentinelChangeCount + 1)) {
+                this._restoreClipboard(clipboardSnapshot, rawText, capturedChangeCount);
+              }
+              return;
+            }
             const sentinelStillPresent = rawText === sentinel
               && (sentinelChangeCount == null || capturedChangeCount == null
                 || capturedChangeCount === sentinelChangeCount);
@@ -427,8 +445,9 @@ public class RunshiSelectionNative {
       .catch((err) => {
         this._restoreClipboard(clipboardSnapshot, sentinel, sentinelChangeCount);
         this._lastClipboardText = this._readClipboardText();
-        this._lastProbeError = err?.message || 'WPS 选区读取失败';
         this._wpsProbePending = false;
+        if (!this._isCurrentProbe(epoch)) return;
+        this._lastProbeError = err?.message || 'WPS 选区读取失败';
         this._maybeClear('selection');
       });
   }
