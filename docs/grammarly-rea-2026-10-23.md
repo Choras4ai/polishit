@@ -32,3 +32,6 @@ REA 返回 Ghidra provider 未配置（`GHIDRA_INSTALL_DIR` 未设置，原生�
 下一步应取得明确的官方 Grammarly 客户端包并记录版本与 SHA-256，先做 REA 静态 inventory，定位文字范围、命中测试和写回相关函数，再对必要函数做原生反编译。只有对应代码或实际调用证据足够时才将机制写入迁移设计；润石现有防抖、基线校验等自主设计不能表述为 Grammarly 算法。
 
 本轮没有获得新的 Grammarly 算法，未修改产品代码，未声称完成逆向。
+
+## 官方包获取补记
+后续取得官方 DMG `/tmp/Grammarly-2026-10-23.dmg`（约122 MB），REA open_binary/inspect_artifact 包级检查 Evidence：`ev_eaedf4863efe4360467092e975e0f63ed222457f69950d160245412437139451`。包级检查已执行；本轮原生函数反编译因分析执行中断尚未完成，不能声称恢复了算法。

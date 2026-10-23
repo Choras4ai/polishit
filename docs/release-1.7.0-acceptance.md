@@ -37,3 +37,9 @@
 - Windows x64：NSIS 安装器已生成，7-Zip 完整性检查返回 `Everything is Ok`；`润石 PoliShit Setup 1.7.0.exe` 保存于相同目录。未在 Windows 执行安装或 Word 测试。
   SHA-256：`0c78ef23761ab833e977f9bd28d75efd6d5b59e06188939f9d703b8aea9f62dd`。
 - 本地测试版已启动；未上传公开稳定版安装器，未切换自动更新。
+
+## 2026-10-23 修复补记
+- 报错包路径为项目 dist/mac-arm64，config.js 开头出现源码不存在的 `le.exports = ProxyProvider;`；已将损坏包隔离到 dist/quarantine-20261023，用此前校验过的测试包替换。谁/什么过程改写了包尚未确认。
+- afterPack 增加 main/preload/src JavaScript 与源码逐字节核验，污染即停止构建。回归使用真实 ASAR 注入同样前缀验证拦截。
+- 修复浮窗重启定位竞态、macOS 旧选区回调及 pending 所有权、Windows Word 自动启动被跳过。全量 278 项通过。新源码不等于已更新旧安装器；新版 Mac app 已重新构建成功并替换项目 dist/mac-arm64 中的测试程序；DMG/Windows 安装器尚未重建。
+- 本次 UI 操作读到合成 Word 选区，但润石窗口点击无响应、截图为空白；原文下划线/悬停/写回仍未通过实机验收。
