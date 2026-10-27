@@ -4,9 +4,9 @@
 
 **思路继续向前，修改留在字里行间。**
 
-[体验产品展示页](https://choras4ai.github.io/polishit/) · [润石官网](https://www.runshi.top/) · [波江座 NEO LAB](https://www.runshi.top/lab/)
+[体验产品展示页](https://www.runshi.top/) · [润石官网](https://www.runshi.top/) · [波江座 NEO LAB](https://www.runshi.top/lab/)
 
-[![稳定版](https://img.shields.io/badge/稳定版-1.6.12-4e6355?style=flat-square)](https://github.com/Choras4ai/polishit/releases/latest) [![平台](https://img.shields.io/badge/平台-macOS%20%2F%20Windows-7b8c72?style=flat-square)](https://choras4ai.github.io/polishit/#download)
+[![稳定版](https://img.shields.io/badge/稳定版-1.6.12-4e6355?style=flat-square)](https://github.com/Choras4ai/polishit/releases/latest) [![平台](https://img.shields.io/badge/平台-macOS%20%2F%20Windows-7b8c72?style=flat-square)](https://www.runshi.top/#download)
 
 </div>
 
@@ -17,7 +17,7 @@
 | [**下载 .dmg 安装包 ↓**](https://github.com/Choras4ai/polishit/releases/download/v1.6.12/runshi-polis-1.6.12-arm64.dmg) | [**下载 .exe 安装程序 ↓**](https://github.com/Choras4ai/polishit/releases/download/v1.6.12/runshi-polis-setup-1.6.12.exe) |
 | 稳定版 1.6.12 · 约 135 MB | 稳定版 1.6.12 · 约 115 MB |
 
-[历史版本与发布说明](https://github.com/Choras4ai/polishit/releases) · [校验安装包](https://choras4ai.github.io/polishit/#download) · [反馈问题](https://github.com/Choras4ai/polishit/issues/new)
+[历史版本与发布说明](https://github.com/Choras4ai/polishit/releases) · [校验安装包](https://www.runshi.top/#download) · [反馈问题](https://github.com/Choras4ai/polishit/issues/new)
 
 macOS 安装包目前为临时签名，尚未 Apple 公证，首次安装可能受到系统拦截。Windows Word 原文浮窗尚待真机验收。网页演示为可操作的设计预览，实际能力取决于安装版本、系统权限与编辑器支持。
 
@@ -28,7 +28,7 @@ macOS 安装包目前为临时签名，尚未 Apple 公证，首次安装可能�
 - **原文审阅**：在兼容编辑器中贴近原文查看修改方案；无法安全定位时，使用结果窗或复制流程。
 - **自行选择服务**：可配置模型服务商；自配 API 与托管模式的数据路径不同，详见[隐私政策](https://www.runshi.top/privacy.html)。
 
-[**打开交互演示：悬停查看理由 → 接受建议 → 撤销修改**](https://choras4ai.github.io/polishit/#experience)
+[**打开交互演示：悬停查看理由 → 接受建议 → 撤销修改**](https://www.runshi.top/#compare)
 
 ## 开始使用
 
@@ -39,7 +39,7 @@ macOS 安装包目前为临时签名，尚未 Apple 公证，首次安装可能�
 
 ## 关于这个仓库
 
-这是润石的**官方产品与安装包发布仓库**。桌面应用源代码现为私有；这里只维护产品展示页、使用说明、反馈入口与正式安装包。
+这是润石的**官方产品与安装包发布仓库**。桌面应用源代码现为私有；这里只维护官网跳转页、使用说明、反馈入口与正式安装包。
 
 GitHub 自动提供的 **Source code (zip/tar.gz)** 仅打包本展示仓库的网页和说明，**不包含润石桌面应用源码**。请下载扩展名为 `.dmg` 或 `.exe` 的安装包。
 
