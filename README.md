@@ -6,7 +6,7 @@
 
 [体验产品展示页](https://www.runshi.top/) · [润石官网](https://www.runshi.top/) · [波江座 NEO LAB](https://www.runshi.top/lab/)
 
-[![稳定版](https://img.shields.io/badge/稳定版-1.6.12-4e6355?style=flat-square)](https://github.com/Choras4ai/polishit/releases/latest) [![平台](https://img.shields.io/badge/平台-macOS%20%2F%20Windows-7b8c72?style=flat-square)](https://www.runshi.top/#download)
+[![稳定版](https://img.shields.io/badge/稳定版-1.7.0-4e6355?style=flat-square)](https://github.com/Choras4ai/polishit/releases/latest) [![平台](https://img.shields.io/badge/平台-macOS%20%2F%20Windows-7b8c72?style=flat-square)](https://www.runshi.top/#download)
 
 </div>
 
@@ -14,8 +14,8 @@
 
 | macOS · Apple Silicon | Windows · x64 |
 | :--- | :--- |
-| [**下载 .dmg 安装包 ↓**](https://github.com/Choras4ai/polishit/releases/download/v1.6.12/runshi-polis-1.6.12-arm64.dmg) | [**下载 .exe 安装程序 ↓**](https://github.com/Choras4ai/polishit/releases/download/v1.6.12/runshi-polis-setup-1.6.12.exe) |
-| 稳定版 1.6.12 · 约 135 MB | 稳定版 1.6.12 · 约 115 MB |
+| [**下载 .dmg 安装包 ↓**](https://github.com/Choras4ai/polishit/releases/download/v1.7.0/runshi-polis-1.7.0-arm64.dmg) | [**下载 .exe 安装程序 ↓**](https://github.com/Choras4ai/polishit/releases/download/v1.7.0/runshi-polis-setup-1.7.0.exe) |
+| 稳定版 1.7.0 · 约 135 MB | 稳定版 1.7.0 · 约 115 MB |
 
 [历史版本与发布说明](https://github.com/Choras4ai/polishit/releases) · [校验安装包](https://www.runshi.top/#download) · [反馈问题](https://github.com/Choras4ai/polishit/issues/new)
 
