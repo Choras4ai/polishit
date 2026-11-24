@@ -62,4 +62,8 @@ with tempfile.TemporaryDirectory() as root:
                 raise RuntimeError("Existing release asset differs: "+p.name)
         else:
             gh("release","upload",tag,str(p))
-    gh("release","edit",tag,"--draft=false","--latest="+str(current).lower(),"--notes-file",str(note))
+    active = json.loads(subprocess.check_output(["curl","-fsSL","--retry","3",base+"/version.json"]))
+    promote = version == active["version"]
+    if promote and any(active["sha256"][platform] != files.get(name) for platform, name in names.items()):
+        raise RuntimeError("Official release changed during synchronization")
+    gh("release","edit",tag,"--draft=false","--latest="+str(promote).lower(),"--notes-file",str(note))
