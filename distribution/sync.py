@@ -7,13 +7,13 @@ import re
 import subprocess
 import tempfile
 
-version = os.environ["VERSION"]
-if not re.fullmatch(r"\d+\.\d+\.\d+", version):
-    raise ValueError("Invalid version")
-tag = f"v{version}"
 base = "https://www.runshi.top"
 history = json.loads(Path("distribution/history.json").read_text())
 live = json.loads(subprocess.check_output(["curl", "-fsSL", "--retry", "3", base + "/version.json"]))
+version = os.environ.get("VERSION") or live["version"]
+if not re.fullmatch(r"\d+\.\d+\.\d+", version):
+    raise ValueError("Invalid version")
+tag = f"v{version}"
 current = version == live["version"]
 names = {"darwin-arm64": f"runshi-polis-{version}-arm64.dmg", "win32-x64": f"runshi-polis-setup-{version}.exe"}
 if current:
@@ -26,6 +26,13 @@ else:
 
 def gh(*args):
     return subprocess.check_output(["gh", *args], text=True)
+
+if current:
+    latest = json.loads(gh("api","repos/Choras4ai/polishit/releases/latest"))
+    existing_digests = {a["name"]: a.get("digest") for a in latest["assets"]}
+    if latest["tag_name"] == tag and all(existing_digests.get(n) == "sha256:" + d for n, d in files.items()):
+        print(f"{tag}: public assets match the updater manifest")
+        raise SystemExit(0)
 
 with tempfile.TemporaryDirectory() as root:
     notes = [live["notes"] if current else "历史版本归档。下列文件已与官网下载存档逐字节校验。", "", "### SHA-256", ""]

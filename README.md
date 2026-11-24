@@ -6,20 +6,19 @@
 
 [体验产品展示页](https://www.runshi.top/) · [润石官网](https://www.runshi.top/) · [波江座 NEO LAB](https://www.runshi.top/lab/)
 
-[![稳定版](https://img.shields.io/badge/稳定版-1.7.1-4A7C6B?style=flat-square)](https://github.com/Choras4ai/polishit/releases/latest) [![平台](https://img.shields.io/badge/平台-macOS%20%2F%20Windows-7b8c72?style=flat-square)](https://www.runshi.top/#download)
+[![稳定版](https://img.shields.io/github/v/release/Choras4ai/polishit?label=稳定版&color=4A7C6B&style=flat-square)](https://github.com/Choras4ai/polishit/releases/latest) [![平台](https://img.shields.io/badge/平台-macOS%20%2F%20Windows-7b8c72?style=flat-square)](https://www.runshi.top/#download)
 
 </div>
 
 ## 下载润石
 
-| macOS · Apple Silicon | Windows · x64 |
-| :--- | :--- |
-| [**下载 .dmg 安装包 ↓**](https://github.com/Choras4ai/polishit/releases/download/v1.7.1/runshi-polis-1.7.1-arm64.dmg) | [**下载 .exe 安装程序 ↓**](https://github.com/Choras4ai/polishit/releases/download/v1.7.1/runshi-polis-setup-1.7.1.exe) |
-| 稳定版 1.7.1 · 约 135 MB | 稳定版 1.7.1 · 约 115 MB |
+润石是独立运行的桌面软件。在 Word 或 WPS 选中文字，从润石浮窗或快捷键开始审阅。Windows 使用系统文字编辑接口，macOS 使用辅助功能权限。
+
+[从官网选择 macOS 或 Windows 安装包](https://www.runshi.top/#download) · [下载 GitHub 最新稳定版](https://github.com/Choras4ai/polishit/releases/latest)
 
 [历史版本与发布说明](https://github.com/Choras4ai/polishit/releases) · [校验安装包](https://www.runshi.top/#download) · [反馈问题](https://github.com/Choras4ai/polishit/issues/new)
 
-macOS 安装包目前为临时签名，尚未 Apple 公证，首次安装可能受到系统拦截。Windows Word 原文浮窗尚待真机验收。网页演示为可操作的设计预览，实际能力取决于安装版本、系统权限与编辑器支持。
+macOS 安装包目前为临时签名，尚未 Apple 公证，首次安装可能受到系统拦截。Windows Word 和 WPS 的独立浮窗已在真实编辑器中完成鼠标悬停、点击接受和原文读回测试。网页演示为可操作的设计预览，实际能力取决于安装版本、系统权限与编辑器支持。
 
 ## 好工具懂得协助，也懂得保留
 
