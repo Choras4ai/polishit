@@ -4,7 +4,7 @@
 
 **思路继续向前，修改留在字里行间。**
 
-[体验产品展示页](https://www.runshi.top/) · [润石官网](https://www.runshi.top/) · [波江座 NEO LAB](https://www.runshi.top/lab/)
+[好友邀请活动](https://www.runshi.top/invite.html) · [润石官网](https://www.runshi.top/) · [波江座 NEO LAB](https://www.runshi.top/lab/)
 
 [![稳定版](https://img.shields.io/github/v/release/Choras4ai/polishit?label=稳定版&color=4A7C6B&style=flat-square)](https://github.com/Choras4ai/polishit/releases/latest) [![平台](https://img.shields.io/badge/平台-macOS%20%2F%20Windows-7b8c72?style=flat-square)](https://www.runshi.top/#download)
 
