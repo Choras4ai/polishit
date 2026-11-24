@@ -27,17 +27,20 @@ else:
 def gh(*args):
     return subprocess.check_output(["gh", *args], text=True)
 
-if current:
-    latest = json.loads(gh("api","repos/Choras4ai/polishit/releases/latest"))
-    existing_digests = {a["name"]: a.get("digest") for a in latest["assets"]}
-    if latest["tag_name"] == tag and all(existing_digests.get(n) == "sha256:" + d for n, d in files.items()):
-        print(f"{tag}: public assets match the updater manifest")
+target = "latest" if current else "tags/" + tag
+lookup = subprocess.run(["gh","api","repos/Choras4ai/polishit/releases/"+target],capture_output=True,text=True)
+if lookup.returncode == 0:
+    published = json.loads(lookup.stdout)
+    existing_digests = {a["name"]: a.get("digest") for a in published["assets"]}
+    if not published["draft"] and published["tag_name"] == tag and all(existing_digests.get(n) == "sha256:" + d for n, d in files.items()):
+        print(f"{tag}: public installers already match the official record")
         raise SystemExit(0)
 
 with tempfile.TemporaryDirectory() as root:
     notes = [live["notes"] if current else "历史版本归档。下列文件已与官网下载存档逐字节校验。", "", "### SHA-256", ""]
     assets = []
     for name, digest in files.items():
+        print("Verifying "+name,flush=True)
         p = Path(root) / name
         # Resume from disk when an intercontinental download hits a time limit.
         for attempt in range(4):
