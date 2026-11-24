@@ -16,7 +16,7 @@ jobs:
   mirror:
     if: github.repository == 'Choras4ai/polishit'
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 100
     steps:
       - uses: actions/checkout@v4
       - name: Verify official packages and publish the release

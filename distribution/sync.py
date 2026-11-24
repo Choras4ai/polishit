@@ -39,7 +39,13 @@ with tempfile.TemporaryDirectory() as root:
     assets = []
     for name, digest in files.items():
         p = Path(root) / name
-        subprocess.run(["curl", "-fsSL", "--retry", "3", "--connect-timeout", "20", "--max-time", "1200", "-o", str(p), base + "/downloads/" + name], check=True)
+        # Resume from disk when an intercontinental download hits a time limit.
+        for attempt in range(4):
+            result = subprocess.run(["curl","-fsSL","--connect-timeout","20","--max-time","900","-C","-","-o",str(p),base+"/downloads/"+name])
+            if result.returncode == 0:
+                break
+        else:
+            raise RuntimeError("Official download interrupted: "+name)
         with p.open("rb") as handle:
             if hashlib.file_digest(handle, "sha256").hexdigest() != digest:
                 raise RuntimeError(f"Installer checksum mismatch: {name}")
