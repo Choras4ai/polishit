@@ -1,0 +1,23 @@
+name: Sync verified desktop installers
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to mirror'
+        required: true
+        type: string
+permissions:
+  contents: write
+concurrency:
+  group: release-sync-${{ inputs.version }}
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify official packages and publish the release
+        env:
+          VERSION: ${{ inputs.version }}
+          GH_TOKEN: ${{ github.token }}
+        run: python3 distribution/sync.py

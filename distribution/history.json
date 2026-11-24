@@ -1,0 +1,13 @@
+{
+  "1.7.2": {
+    "runshi-polis-setup-1.7.2.exe": "0d3cdc40b6dc0a5f02f22d429b6057a8b54e0acf052862a247c65868a7e3afcb",
+    "runshi-polis-1.7.2-arm64.dmg": "a736f3429af11feaae772e4aa677a52eb70bcf56db7e6cb5ed0ee0c65f320b09"
+  },
+  "1.7.3": {
+    "runshi-polis-1.7.3-arm64.dmg": "5ca136c194df776c967e8284326366a2edd9a0d3792e373342838f01d8bc9ce1"
+  },
+  "1.7.4": {
+    "runshi-polis-setup-1.7.4.exe": "b3a5c353de02ca625c75b6743c254adbe7cae0dd0812748a73e277d01b158ef7",
+    "runshi-polis-1.7.4-arm64.dmg": "4d328ee2cabcc8c379d7ad8bfa30ed83a580706129d614bce9379f952fdf9547"
+  }
+}
